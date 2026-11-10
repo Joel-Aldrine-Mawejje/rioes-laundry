@@ -272,4 +272,6 @@ function vSet(){vSet1();$('#view').insertAdjacentHTML('beforeend','<div class="c
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 render();
 </script>
-</body></html>
+<script>
+render();initDb();initCfg();
+</script></body></html>
