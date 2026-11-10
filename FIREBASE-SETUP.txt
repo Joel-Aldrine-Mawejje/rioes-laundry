@@ -1,0 +1,27 @@
+RIOES LAUNDRY - SHARED DATABASE + LOGINS (Firebase, free Spark plan)
+You do this ONCE, on a laptop, with a Google account. Nothing here needs coding.
+
+PART 1 - Create the project
+1. Go to console.firebase.google.com > Add project. Name it rioes-laundry. Turn Google Analytics off. Create.
+2. Left menu > Build > Firestore Database > Create database. Pick a location (africa-south1 Johannesburg if offered, otherwise europe-west). Choose "Production mode".
+3. In Firestore, open the Rules tab. Delete what is there, paste the contents of firestore.rules from this pack, click Publish.
+
+PART 2 - Staff logins
+4. Build > Authentication > Get started > Sign-in method > Email/Password > Enable > Save.
+5. Authentication > Users > Add user. Create one account per person (you, cashier, workers) with email + password. Only these people can open the app.
+6. Authentication > Settings > User actions: turn OFF "Enable create (sign-up)" so strangers cannot make accounts.
+7. Authentication > Settings > Authorized domains > Add domain: yourname.github.io (or your Netlify domain).
+
+PART 3 - Connect the app
+8. Project settings (gear icon) > General > "Your apps" > click the web icon </> > register an app named rioes-web. Skip hosting.
+9. Firebase shows a block starting "const firebaseConfig = {". Copy only what is between the braces.
+10. Open firebase-config.js from this pack. Replace everything between the braces with what you copied (keep window.FIREBASE_CONFIG = { ... }; around it). Save.
+11. Upload ALL files in this pack to GitHub (replace the old ones), as in README.txt.
+12. Open your link. A sign-in screen appears. Sign in. The status line on Home should say "Saved to the cloud".
+
+NOTES
+- The Firebase config values are not secrets. The login + Firestore rules are what protect your data.
+- Data already saved on a device is uploaded automatically the first time that device signs in.
+- Free plan: about 50,000 reads and 20,000 writes a day. Plenty for a small shop. If you grow to many thousands of orders, tell me and I will make the app load only recent ones.
+- Staff all see everything for now. Separate owner/worker permissions are the next upgrade.
+- Back up anyway: Settings > Backup.
