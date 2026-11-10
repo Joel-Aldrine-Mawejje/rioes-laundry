@@ -62,7 +62,7 @@ const q1=s=>document.querySelector(s);
 const go=()=>{q1('#lr').textContent='';au.signInWithEmailAndPassword(q1('#le').value.trim(),q1('#lp').value).catch(()=>q1('#lr').textContent='Could not sign in. Check the email and password.')};
 q1('#lb').onclick=go;q1('#lp').onkeydown=e=>{if(e.key=='Enter')go()};
 q1('#so').onclick=()=>au.signOut().then(()=>location.reload());
-au.onAuthStateChanged(u=>{q1('#lg').style.display=u?'none':'flex';q1('#so').style.display=u?'block':'none';window.ME=u?u.email:null;if(u)res(db)});
+au.onAuthStateChanged(u=>{q1('#lg').style.display=u?'none':'flex';q1('#so').style.display=u?'block':'none';window.ME=u?u.email:null;window.DN=u?u.displayName:null;if(u)res(db)});
 })();
 </script>
 <script>
@@ -300,6 +300,14 @@ function clrDemo(){if(!dd){dd=true;vSet();setTimeout(()=>{dd=false},5000);return
 D.o.filter(o=>P.includes(o.ph)).forEach(o=>{delete last['orders/'+o.id];if(DBH)DBH.doc('orders/'+o.id).delete().catch(()=>{})});D.o=D.o.filter(o=>!P.includes(o.ph));
 P.forEach(p=>{delete last['clients/'+p];if(D.c[p]){delete D.c[p];if(DBH)DBH.doc('clients/'+p).delete().catch(()=>{})}});save();toast('Demo data cleared');vSet()}
 function vSet(){vSet2();$('#view').insertAdjacentHTML('beforeend',`<div class="card"><b>Team &amp; permissions</b><div class="mut">Signed in as ${esc(window.ME||'this device (no login)')} • ${isO()?'Owner':'Worker'}</div><div class="mut" style="margin-top:6px">Owners: ${esc(OWN().join(', '))}. Everyone else is a worker: they see Tasks, New, Orders and Clients only, and cannot delete anything. Add staff in Firebase, Authentication, Users.</div></div><div class="card"><b>Clear demo data</b><div class="mut">Removes the sample clients (Amina, Brian, Cynthia) and all their orders.</div><div class="row2"><button class="g" onclick="clrDemo()">${dd?'Tap again to confirm':'Clear demo data'}</button></div></div>`)}
+</script>
+<script>
+function who(){let n=window.DN;if(!n&&window.ME){n=window.ME.split('@')[0].replace(/[0-9]/g,'').split(/[._-]+/)[0];n=n?n[0].toUpperCase()+n.slice(1):''}return n||''}
+function hi(){if(V!='dash'&&V!='work')return;const h=$('#view h2');if(!h)return;const H=new Date().getHours(),g=H<12?'Good morning':H<17?'Good afternoon':'Good evening',n=who();
+h.innerHTML=g+(n?', '+esc(n):'')+(window.ME?' <span class="mut" style="font-size:13px;cursor:pointer" onclick="cn()" title="Change name">✎</span>':'');
+if(V=='work')h.insertAdjacentHTML('afterend','<div class="mut" style="margin:-6px 0 10px">Your board for today</div>')}
+function cn(){const n=prompt('What should we call you?',who());if(n===null||!n.trim())return;firebase.auth().currentUser.updateProfile({displayName:n.trim()}).then(()=>{window.DN=n.trim();render();toast('Name saved')}).catch(()=>toast('Could not save the name'))}
+const R0=render;render=function(){R0();hi()};
 </script>
 <script>
 render();initDb();initCfg();
