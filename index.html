@@ -67,7 +67,9 @@ q1('#so').onclick=()=>au.signOut().then(()=>location.reload());
 au.onAuthStateChanged(u=>{q1('#lg').style.display=u?'none':'flex';q1('#so').style.display=u?'block':'none';window.ME=u?u.email:null;window.DN=u?u.displayName:null;if(u){fs.doc('users/'+u.email.toLowerCase()).get().then(d=>{window.ROLE=d.exists?d.data().role:null;window.UNAME=d.exists?d.data().name:null}).catch(()=>{window.ROLE=null}).then(()=>res(db))}});
 })();
 </script>
-<script>
+<script>var vOrders,vRep1,vRep3,vDash0,vNew1,vNew2,vSet1,vSet2,vOrders0;
+function bkBanner(){} function tasks(){return[]}
+
 const S=['Received','Processing','Ready','Collected'];
 let PER=1000,WA={ready:'Hello {name}, your laundry (order {tag}) is ready for pickup at Rioes Laundry. Balance due: {bal}. Thank you!',readyd:'Hello {name}, your laundry (order {tag}) is ready for delivery. Balance due: {bal}. We will contact you to confirm the delivery time.',upd:'Hello {name}, order {tag} is now {st}.',unpaid:'Hello {name}, a friendly reminder: you have an unpaid balance of {bal} on order {tag}. Kindly pay by Mobile Money or cash.',survey:'Hi {name}, thank you for choosing Rioes Laundry! You now have {pts} loyalty points. How was order {tag}? Reply 1-5 (5 = excellent) and tell us what we can improve.',bday:'Happy birthday {name}! Enjoy 10% off your next order at Rioes Laundry this week.',back:'Hi {name}, we miss you at Rioes Laundry! Bring your next load this week and get double points.',receipt:'Rioes Laundry receipt {tag}\nDate: {date}\n{items}\nTotal: {total}\nPaid: {paid}\nBalance: {bal}\nLoyalty points: {pts}\nThank you {name}!'};
 let SV=[['Wash & fold (per kg)',3000],['Shirt / blouse',8000],['Suit (2-piece)',25000],['Dress',12000],['Duvet / blanket',20000],['Ironing only (piece)',1000],['Curtains (per panel)',10000]];
@@ -105,7 +107,8 @@ function oc(o){const i=S.indexOf(o.st);return `<div class="card"><div class="row
 function nav(){const h=NAV.map(n=>`<button class="nb ${V==n[0]?'on':''}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}</button>`).join('');
 $('#bot').innerHTML=h;$('#side').innerHTML='<div class="brand">Rioes Laundry<small>& Dry Cleaning, Kampala</small></div>'+h.replace(/<span>.*?<\/span>/g,m=>m.replace(/<\/?span>/g,'')+' ')}
 function go(v){V=v;q='';f='All';render();scrollTo(0,0)}
-function render(){nav();({dash:vDash,new:vNew,orders:vOrders,cust:vCust,rep:vRep})[V]()}
+function ROUTE(v){var FN={dash:function(){vDash()},work:function(){vWork()},new:function(){vNew()},orders:function(){vOrders()},cust:function(){vCust()},rep:function(){vRep()},set:function(){vSet()},reach:function(){vReach()},edit:function(){vEdit()},team:function(){vTeam()},audit:function(){vAudit()},ops:function(){vOps()},exp:function(){vExp()}};if(FN[v])FN[v]();else if(typeof vDash==='function')vDash()}
+function render(){nav();ROUTE(V)}
 function seed(){const n=Date.now(),d=864e5;D.c={'256772100200':{name:'Amina K.',pts:120,spent:120000,visits:6},'256701555123':{name:'Brian O.',pts:40,spent:40000,visits:2},'256759888777':{name:'Cynthia N.',pts:310,spent:310000,visits:11}};
 const mk=(id,p,it,st,t,ex)=>{const g=it.reduce((a,x)=>a+x.p*x.q,0);return{id,ph:p,items:it,express:ex,gross:g,disc:0,net:g,paid:st=='Collected'?g:Math.round(g/2),st,t}};
 D.o=[mk(1001,'256772100200',[{n:SV[0][0],p:3000,q:6}],'Collected',n-2*d,0),mk(1002,'256701555123',[{n:SV[2][0],p:25000,q:1}],'Ready',n-d,0),mk(1003,'256759888777',[{n:SV[1][0],p:8000,q:4},{n:SV[5][0],p:1000,q:4}],'Washing',n,1)];D.n=1004;save();render()}
@@ -169,7 +172,7 @@ if(!DBH)return;const w=(p,x)=>{const j=JSON.stringify(x);if(last[p]===j)return;l
 D.o.forEach(o=>w('orders/'+o.id,o));Object.entries(D.c).forEach(([k,c])=>w('clients/'+k,c));if(cfgDirty){cfgDirty=false;w('settings/main',D.cfg)}}
 async function initCfg(){try{if(typeof claude==='undefined')return;const db=await claude.use('db');if(!db)return;db.collection('settings').onSnapshot(s=>{s.docs.forEach(d=>{if(d.id=='main'){const c=d.data();SV=c.sv||SV;PER=c.per||PER;WA={...WA,...c.wa};last['settings/main']=JSON.stringify(c);D.cfg=c}});ren()})}catch(e){}}
 function nav(){const h=NAV.map(n=>`<button class="nb ${V==n[0]?'on':''}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}</button>`).join('');$('#bot').innerHTML=h;$('#side').innerHTML='<div class="brand">Rioes Laundry<small>& Dry Cleaning, Kampala</small></div>'+h.replace(/<span>(.*?)<\/span>/g,'$1 ')}
-function render(){D.o.forEach(o=>{if(!S.includes(o.st))o.st='Processing'});nav();({dash:vDash,work:vWork,new:vNew,orders:vOrders,cust:vCust,rep:vRep,set:vSet})[V]()}
+function render(){D.o.forEach(o=>{if(!S.includes(o.st))o.st='Processing'});nav();ROUTE(V)}
 function tgl(){const r=document.documentElement,c=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=c=='dark'?'light':'dark';try{localStorage.setItem('rtheme',r.dataset.theme)}catch(e){}}
 function oc0(o){const i=S.indexOf(o.st),b=bal(o),late=o.exp&&o.st!='Collected'&&o.exp<td();
 return `<div class="card"><div class="row"><b>${tag(o)} ${esc(nm(o.ph))}</b><span class="tag">${o.st}</span></div><div class="mut">${o.items.map(x=>x.q+'× '+esc(x.n)).join(', ')}</div>
@@ -248,7 +251,7 @@ $('#view').innerHTML=`<h2>This week’s reach-out</h2><div class="card"><b>Weekl
 </div>
 ${nx?`<a class="g pr" href="${wl(nx.p,txt(nx))}" target="_blank" rel="noopener" onclick="markW('${nx.p}')">Send to next client (${sel.length} left): ${esc(nx.c.name)}</a>`:'<div class="card mut">Everyone due this week has been contacted. Go and fold something.</div>'}
 <h2 style="margin-top:16px">Who to contact (${L.length})</h2><div class="cols">${L.map(x=>`<div class="card"><div class="row"><label class="ck" style="margin:0"><input type="checkbox" ${rx[x.p]?'':'checked'} onchange="rx['${x.p}']=!this.checked;vReach()"> <b>${esc(x.c.name)}</b></label><span class="tag">${x.over>0?x.over+' days overdue':'due soon'}</span></div><div class="mut">Usually orders every ~${x.gap} days • last order ${x.days} days ago</div><div class="row2"><a class="g" href="${wl(x.p,txt(x))}" target="_blank" rel="noopener" onclick="markW('${x.p}')">Send</a></div></div>`).join('')||'<div class="card mut">Nobody is due yet. Place a few orders and the pattern shows up.</div>'}</div>`}
-function render(){D.o.forEach(o=>{if(!S.includes(o.st))o.st='Processing'});nav();({dash:vDash,work:vWork,new:vNew,orders:vOrders,cust:vCust,rep:vRep,set:vSet,reach:vReach})[V]()}
+function render(){D.o.forEach(o=>{if(!S.includes(o.st))o.st='Processing'});nav();ROUTE(V)}
 render();
 </script>
 <script>function setT(id,v){if(!v)return;const o=D.o.find(x=>x.id==id);o.t=new Date(v+'T12:00:00').getTime();save();toast('Order date updated');render()}</script><script>
@@ -280,7 +283,7 @@ let dk='',dd=false,ed=null;
 function oc(o){return oc0(o).replace(/<a class="g" href="[^"]*" target="_blank" rel="noopener">Receipt<\/a>/,`<button class="g" onclick="rcpt(${o.id})">Receipt image</button>`).replace('>Pickup: ','>'+(o.mode=='Delivery'?'Delivery':'Pickup')+': ').replace('<div class="mut">Received:',(o.ins?`<div class="mut">📝 ${esc(o.ins)}</div>`:'')+(bal(o)>0?`<div class="mut">Payment due ${ld(o.t+(o.terms??3)*DAY)} (net ${o.terms??3} days)</div>`:'')+'<div class="mut">Received:').replace(/<\/div><\/div>$/,`${isO()?`<button class="g" onclick="eo(${o.id})">Edit</button>`:''}${isO()?`<button class="g" onclick="delO(${o.id})">${dk==o.id?'Tap again to delete':'Delete'}</button>`:''}</div></div>`)}
 function cl(){cl0();if(!isO())document.querySelectorAll('#cl .row2 button').forEach(b=>{if(/emove|^Edit$/.test(b.textContent))b.remove()})}
 function nav(){const W=['work','new','orders','cust','set'],N=NAV.filter(n=>isO()||W.includes(n[0])),h=N.map(n=>`<button class="nb ${V==n[0]?'on':''}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}</button>`).join('');$('#bot').style.gridTemplateColumns='repeat('+N.length+',1fr)';$('#bot').innerHTML=h;$('#side').innerHTML='<div class="brand">Rioes Laundry<small>& Dry Cleaning, Kampala</small></div>'+h.replace(/<span>(.*?)<\/span>/g,'$1 ')}
-function render(){D.o.forEach(o=>{if(!S.includes(o.st))o.st='Processing'});if(!isO()&&['dash','rep','reach','team','audit'].includes(V))V='work';nav();({dash:vDash,work:vWork,new:vNew,orders:vOrders,cust:vCust,rep:vRep,set:vSet,reach:vReach,edit:vEdit,team:vTeam,audit:vAudit})[V]()}
+function render(){D.o.forEach(o=>{if(!S.includes(o.st))o.st='Processing'});if(!isO()&&['dash','rep','reach','team','audit'].includes(V))V='work';nav();ROUTE(V)}
 function delO(id){if(dk!==id){dk=id;render();setTimeout(()=>{if(dk===id){dk='';if(V=='orders')render()}},4000);return}dk='';const o=D.o.find(x=>x.id==id);if(!o)return;const c=D.c[o.ph];
 if(c){c.spent=Math.max(0,c.spent-o.net);c.visits=Math.max(0,c.visits-1);c.pts=Math.max(0,c.pts-Math.floor(o.net/PER)+(o.pu!==undefined?o.pu:Math.ceil((o.disc||0)/500)*5))}
 D.o=D.o.filter(x=>x.id!=id);delete last['orders/'+id];if(DBH)DBH.doc('orders/'+id).delete().catch(()=>{SY='Could not delete in the cloud (owner only)';ren()});save();toast('Order deleted');render()}
