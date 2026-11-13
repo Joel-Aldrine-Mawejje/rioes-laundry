@@ -1,46 +1,20 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function me() { return request.auth.token.email.lower(); }
-    function udoc() { return /databases/$(database)/documents/users/$(me()); }
-    function owner() { return me() in ['mawejje2016@gmail.com']; }
-    function role() { return exists(udoc()) ? get(udoc()).data.role : 'none'; }
-    function isAdmin() { return request.auth != null && (owner() || role() == 'admin'); }
-    function isStaff() { return request.auth != null && (isAdmin() || role() == 'operator'); }
-    function changes() { return request.resource.data.diff(resource.data).affectedKeys(); }
-
+    function owner() {
+      return request.auth != null && request.auth.token.email in ['mawejje2016@gmail.com'];
+    }
     match /orders/{id} {
-      allow read, create: if isStaff();
-      allow update: if isAdmin() || (isStaff() && changes().hasOnly(['st','paid','pays','ct','fb','rn','un']));
-      allow delete: if isAdmin();
+      allow read, create, update: if request.auth != null;
+      allow delete: if owner();
     }
     match /clients/{id} {
-      allow read, create: if isStaff();
-      allow update: if isAdmin() || (isStaff() && changes().hasOnly(['pts','spent','visits','bn','wn','sx','wk','sub','credit','tops']));
-      allow delete: if isAdmin();
+      allow read, create, update: if request.auth != null;
+      allow delete: if owner();
     }
     match /settings/{id} {
-      allow read: if isStaff();
-      allow write: if isAdmin();
-    }
-    match /users/{id} {
-      allow read: if request.auth != null && (me() == id || isAdmin());
-      allow write: if isAdmin();
-    }
-    match /ops/{id} {
-      allow read: if isStaff();
-      allow create: if isStaff() && request.resource.data.by == me();
-      allow update, delete: if isAdmin();
-    }
-    match /expenses/{id} {
-      allow read: if isStaff();
-      allow create: if isAdmin() || (isStaff() && request.resource.data.by == me() && request.resource.data.status == 'pending');
-      allow update, delete: if isAdmin();
-    }
-    match /audit/{id} {
-      allow create: if isStaff() && request.resource.data.by == me();
-      allow read: if isAdmin();
-      allow update, delete: if false;
+      allow read: if request.auth != null;
+      allow write: if owner();
     }
   }
 }
