@@ -773,4 +773,277 @@ tasks=function(){
 
 initSubs();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+/* ===== PHASE 6: ANALYTICS, P&L, CHARTS, FORECASTS ===== */
+
+// ---- period helpers ----
+var P6={period:30,cmpMode:'prev',cmpFrom:'',cmpTo:'',tab:'overview'};
+var DAY6=864e5;
+function p6Range(){
+  var now=Date.now(),a=P6.period?now-P6.period*DAY6:0;
+  return{a:a,b:now+1};
+}
+function p6CmpRange(a,b){
+  if(P6.cmpMode==='prev'){var len=b-a;return{a:a-len,b:a}}
+  if(P6.cmpMode==='custom'&&P6.cmpFrom&&P6.cmpTo)
+    return{a:new Date(P6.cmpFrom+'T00:00:00+03:00').getTime(),b:new Date(P6.cmpTo+'T23:59:59+03:00').getTime()}
+  return null;
+}
+function p6Label(){return P6.period?'Last '+P6.period+' days':'All time'}
+function ld6(t){return new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
+function chg(a,b){if(!b)return'';var d=Math.round((a-b)/b*100);return'<span style="color:'+(d>=0?'var(--ok)':'#e5484d')+'"> '+(d>=0?'▲':'▼')+Math.abs(d)+'%</span>'}
+
+// ---- data aggregation ----
+function p6Agg(from,to){
+  var O=D.o.filter(function(o){return o.t>=from&&o.t<to});
+  var first={};D.o.forEach(function(o){if(!(o.ph in first)||o.t<first[o.ph])first[o.ph]=o.t});
+  var cash=0,M={},S={},C={},daily={},weekday=[0,0,0,0,0,0,0],clients=new Set();
+  O.forEach(function(o){
+    if(o.pays&&o.pays.length)o.pays.forEach(function(p){if(p.t>=from&&p.t<to&&p.m!=='Account credit'){cash+=p.a;M[p.m]=(M[p.m]||0)+p.a}});
+    else if(o.paid>0){cash+=o.paid;M.Cash=(M.Cash||0)+o.paid}
+    (o.items||[]).forEach(function(i){S[i.n]=(S[i.n]||0)+i.p*i.q});
+    C[o.ph]=(C[o.ph]||0)+o.net;
+    var dk=ld6(o.t);daily[dk]=(daily[dk]||0)+o.net;
+    weekday[new Date(o.t).getDay()]+=o.net;
+    clients.add(o.ph);
+  });
+  var rev=O.reduce(function(a,o){return a+o.net},0);
+  var allPhones=Object.keys(C);
+  return{n:O.length,rev:rev,cash:cash,aov:O.length?rev/O.length:0,
+    nw:allPhones.filter(function(p){return first[p]>=from}).length,
+    ret:allPhones.filter(function(p){return first[p]<from}).length,
+    owed:D.o.reduce(function(a,o){return a+o.net-o.paid},0),
+    M:M,S:S,C:C,daily:daily,weekday:weekday,clients:clients.size};
+}
+
+// ---- expense aggregation ----
+function p6Exp(from,to){
+  var EX=Object.values(typeof EXS!=='undefined'?EXS:{}).filter(function(e){return e.status==='approved'&&new Date(e.date+'T00:00:00+03:00').getTime()>=from&&new Date(e.date+'T00:00:00+03:00').getTime()<to});
+  var total=EX.reduce(function(a,e){return a+e.amt},0),cats={};
+  EX.forEach(function(e){cats[e.cat]=(cats[e.cat]||0)+e.amt});
+  return{total:total,cats:cats,n:EX.length};
+}
+
+// ---- sub revenue ----
+function p6SubRev(from,to){
+  return Object.values(SUBS).reduce(function(a,sub){
+    return a+(sub.payments||[]).filter(function(p){return p.status==='Paid'&&new Date(p.date+'T00:00:00+03:00').getTime()>=from&&new Date(p.date+'T00:00:00+03:00').getTime()<to}).reduce(function(x,p){return x+(+p.amt||0)},0);
+  },0);
+}
+
+// ---- lapsed client detection ----
+function lapsedClients(){
+  var now=Date.now(),results=[];
+  Object.keys(D.c).forEach(function(p){
+    var c=D.c[p];
+    var orders=D.o.filter(function(o){return o.ph===p}).sort(function(a,b){return a.t-b.t});
+    if(orders.length<2)return;
+    var gaps=[];
+    for(var i=1;i<orders.length;i++)gaps.push((orders[i].t-orders[i-1].t)/DAY6);
+    var avgGap=gaps.reduce(function(a,g){return a+g},0)/gaps.length;
+    var lastOrder=orders[orders.length-1];
+    var daysSince=(now-lastOrder.t)/DAY6;
+    var overdue=daysSince-avgGap;
+    var active=D.o.some(function(o){return o.ph===p&&o.st!=='Collected'});
+    if(overdue>5&&!active){
+      results.push({p:p,c:c,avgGap:Math.round(avgGap),daysSince:Math.round(daysSince),overdue:Math.round(overdue),lastOrder:lastOrder,orders:orders.length});
+    }
+  });
+  return results.sort(function(a,b){return b.overdue-a.overdue});
+}
+
+// ---- simple 4-week forecast ----
+function forecast(){
+  if(D.o.length<7)return null;
+  var now=Date.now(),weeks=[];
+  for(var w=7;w>=1;w--){
+    var a=now-w*7*DAY6,b=a+7*DAY6;
+    var rev=D.o.filter(function(o){return o.t>=a&&o.t<b}).reduce(function(x,o){return x+o.net},0);
+    weeks.push(rev);
+  }
+  var avg=weeks.reduce(function(a,v){return a+v},0)/weeks.length;
+  var trend=(weeks[weeks.length-1]-weeks[0])/(weeks.length-1||1);
+  return{weeks:weeks,avg:avg,trend:trend,
+    next4:Array.from({length:4},function(_,i){return Math.max(0,Math.round(avg+trend*(i+1)))})};
+}
+
+// ---- insights ----
+function insights(cur,prv,exp){
+  var tips=[];
+  if(prv){
+    if(cur.rev<prv.rev*0.85)tips.push({icon:'📉',text:'Revenue is down '+Math.round((1-cur.rev/prv.rev)*100)+'% vs the previous period. '+(cur.nw<prv.nw?'New client acquisition also dropped.':'Returning clients spent less.')});
+    if(cur.nw<prv.nw*0.7&&prv.nw>2)tips.push({icon:'🔍',text:'Fewer new clients this period ('+cur.nw+' vs '+prv.nw+' previously). Consider a targeted promotion or referral incentive.'});
+    if(cur.ret>cur.nw*2&&cur.rev>prv.rev)tips.push({icon:'⭐',text:'Strong repeat business this period – returning clients are driving growth. Keep loyalty rewards active.'});
+  }
+  var lapsed=lapsedClients();
+  if(lapsed.length>0)tips.push({icon:'👋',text:lapsed.length+' client'+(lapsed.length>1?'s are':' is')+' overdue for a return. '+lapsed[0].c.name+' usually orders every '+lapsed[0].avgGap+' days but hasn\'t ordered in '+lapsed[0].daysSince+' days. A targeted reminder could recover lost revenue.'});
+  if(exp.total>cur.rev*0.6&&cur.rev>0)tips.push({icon:'💸',text:'Expenses are '+Math.round(exp.total/cur.rev*100)+'% of revenue this period. Review non-essential costs.'});
+  var wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var peak=cur.weekday.indexOf(Math.max.apply(null,cur.weekday));
+  var quiet=cur.weekday.indexOf(Math.min.apply(null,cur.weekday));
+  if(cur.weekday[peak]>0)tips.push({icon:'📅',text:'Peak day: '+wd[peak]+'. Quietest: '+wd[quiet]+'. Consider scheduling maintenance or staff leave on '+wd[quiet]+'s.'});
+  var topSvc=Object.keys(cur.S).sort(function(a,b){return cur.S[b]-cur.S[a]})[0];
+  if(topSvc)tips.push({icon:'🏆',text:'Top service: '+topSvc+' ('+u(cur.S[topSvc])+'). Ensure it\'s always prominently offered to new clients.'});
+  return tips;
+}
+
+// ---- chart helpers ----
+var chartReg={};
+function mkChart(id,type,labels,datasets,opts){
+  if(chartReg[id]){try{chartReg[id].destroy()}catch(e){}}
+  var el=document.getElementById(id);if(!el)return;
+  chartReg[id]=new Chart(el,{type:type,data:{labels:labels,datasets:datasets},options:Object.assign({responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'var(--ink)'}}}},opts||{})});
+}
+function barDs(label,data,color){return{label:label,data:data,backgroundColor:color||'rgba(56,182,240,0.7)',borderColor:color||'#38b6f0',borderWidth:1}}
+function lineDs(label,data,color){return{label:label,data:data,borderColor:color||'#38b6f0',backgroundColor:(color||'rgba(56,182,240,0.15)'),fill:true,tension:0.3,pointRadius:3}}
+
+// ---- PDF/Excel export ----
+function exportPDF(){window.print()}
+function exportCSV(cur,exp,r){
+  var rows=[['Metric','Value'],
+    ['Period',p6Label()],
+    ['Orders',cur.n],['Revenue earned (UGX)',Math.round(cur.rev)],
+    ['Cash collected (UGX)',Math.round(cur.cash)],
+    ['Avg order value (UGX)',Math.round(cur.aov)],
+    ['New clients',cur.nw],['Returning clients',cur.ret],
+    ['Unpaid balances (UGX)',Math.round(cur.owed)],
+    ['Approved expenses (UGX)',Math.round(exp.total)],
+    ['Gross profit (UGX)',Math.round(r.gp)],
+    ['Profit margin',Math.round(r.margin)+'%'],
+    [''],['Expenses by category']];
+  Object.keys(exp.cats).forEach(function(k){rows.push([k,Math.round(exp.cats[k])])});
+  rows.push([''],['Revenue by service']);
+  Object.keys(cur.S).sort(function(a,b){return cur.S[b]-cur.S[a]}).forEach(function(k){rows.push([k,Math.round(cur.S[k])])});
+  var csv=rows.map(function(r){return r.map(function(c){return'"'+String(c||'').replace(/"/g,'""')+'"'}).join(',')}).join('\n');
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='Rioes-report-'+td()+'.csv';document.body.appendChild(a);a.click();a.remove();toast('CSV downloaded – open in Excel or Sheets');
+}
+
+// ---- main reports page ----
+var _vRepOld6=vRep;
+vRep=function(){
+  var r6=p6Range(),cur=p6Agg(r6.a,r6.b),cr=p6CmpRange(r6.a,r6.b),prv=cr?p6Agg(cr.a,cr.b):null;
+  var exp=p6Exp(r6.a,r6.b),subRev=p6SubRev(r6.a,r6.b);
+  var gp=cur.rev+subRev-exp.total,margin=cur.rev+subRev>0?gp/(cur.rev+subRev)*100:0;
+  var fc=forecast();
+  var tabs=['overview','pl','charts','lapsed','forecast'];
+  var tabBar='<div class="chips" style="margin-bottom:12px">'+tabs.map(function(t){
+    return'<button class="chip '+(P6.tab===t?'on':'')+'" onclick="P6.tab=\''+t+'\';vRep()">'+
+    {overview:'Overview',pl:'P&L',charts:'Charts',lapsed:'Lapsed clients',forecast:'Forecast'}[t]+'</button>';
+  }).join('')+'</div>';
+
+  var periodBar='<div class="card" style="padding:10px 14px"><div class="row2" style="margin:0;flex-wrap:wrap;gap:8px">'+
+    '<select onchange="P6.period=+this.value;vRep()" style="flex:1;min-width:110px">'+
+    [7,14,30,60,90,0].map(function(n){return'<option value="'+n+'"'+(P6.period===n?' selected':'')+'>'+(n?'Last '+n+' days':'All time')+'</option>'}).join('')+
+    '</select>'+
+    '<select onchange="P6.cmpMode=this.value;vRep()" style="flex:1;min-width:130px">'+
+    '<option value="prev"'+(P6.cmpMode==='prev'?' selected':'')+'>vs previous period</option>'+
+    '<option value="custom"'+(P6.cmpMode==='custom'?' selected':'')+'>vs custom period</option>'+
+    '<option value="none"'+(P6.cmpMode==='none'?' selected':'')+'>no comparison</option>'+
+    '</select>'+
+    (P6.cmpMode==='custom'?'<input type="date" value="'+P6.cmpFrom+'" onchange="P6.cmpFrom=this.value" style="flex:1;min-width:120px"><input type="date" value="'+P6.cmpTo+'" onchange="P6.cmpTo=this.value" style="flex:1;min-width:120px">':'')+
+    '<button class="p" onclick="exportCSV('+JSON.stringify(cur)+','+JSON.stringify(exp)+',{gp:'+gp+',margin:'+margin+'})">Export CSV</button>'+
+    '<button class="g" onclick="exportPDF()">Print/PDF</button>'+
+    '</div></div>';
+
+  var body='';
+
+  if(P6.tab==='overview'){
+    var kv=function(l,v,c,vs){return'<div class="stat">'+l+'<b style="color:'+(c||'var(--sky2)')+'">'+u(v)+'</b>'+(vs!==undefined?chg(v,vs):'')+(prv&&vs===undefined?'':'')+'</div>'};
+    body='<div class="grid">'+
+      kv('Revenue earned',cur.rev,'var(--sky2)',prv&&prv.rev)+
+      kv('Cash collected',cur.cash,'var(--ok)',prv&&prv.cash)+
+      kv('Subscription revenue',subRev,'var(--sky2)')+
+      kv('Avg order value',cur.aov,'var(--ink)',prv&&prv.aov)+
+      kv('Unpaid balances',cur.owed,'#e5484d')+
+      kv('Approved expenses',exp.total,'#e5484d',prv&&p6Exp(cr&&cr.a,cr&&cr.b).total)+
+      '</div>'+
+      '<div class="card"><div class="lines">'+
+      '<div><span>Orders in period</span><b>'+cur.n+(prv?chg(cur.n,prv.n):'')+'</b></div>'+
+      '<div><span>New clients</span><b>'+cur.nw+(prv?chg(cur.nw,prv.nw):'')+'</b></div>'+
+      '<div><span>Returning clients</span><b>'+cur.ret+'</b></div>'+
+      '</div></div>'+
+      (insights(cur,prv,exp).map(function(tip){return'<div class="card tk"><b>'+tip.icon+' Insight</b><div>'+tip.text+'</div></div>'}).join('')||'')+
+      '<div class="card"><b>Revenue by service</b><div class="lines">'+
+      Object.keys(cur.S).sort(function(a,b){return cur.S[b]-cur.S[a]}).map(function(k){return'<div><span>'+esc(k)+'</span><span>'+u(cur.S[k])+'</span></div>'}).join('')+
+      '</div></div>'+
+      '<div class="card"><b>Cash by payment method</b><div class="lines">'+
+      Object.keys(cur.M).map(function(k){return'<div><span>'+esc(k)+'</span><span>'+u(cur.M[k])+'</span></div>'}).join('')+
+      '</div></div>';
+  }
+
+  if(P6.tab==='pl'){
+    body='<div class="card"><b>Profit & Loss – '+p6Label()+'</b><div class="lines">'+
+      '<div><span>Laundry revenue</span><span>'+u(cur.rev)+'</span></div>'+
+      '<div><span>Subscription revenue</span><span>'+u(subRev)+'</span></div>'+
+      '<div><b>Total revenue</b><b>'+u(cur.rev+subRev)+'</b></div>'+
+      '</div><div style="border-top:1px solid var(--line);margin:8px 0"></div><div class="lines">'+
+      (Object.keys(exp.cats).length?Object.keys(exp.cats).sort(function(a,b){return exp.cats[b]-exp.cats[a]}).map(function(k){return'<div><span>'+esc(k)+'</span><span>'+u(exp.cats[k])+'</span></div>'}).join(''):
+      '<div class="mut">No approved expenses in this period. Log expenses under the Expenses tab.</div>')+
+      '<div><b>Total expenses</b><b>'+u(exp.total)+'</b></div>'+
+      '</div><div style="border-top:2px solid var(--sky);margin:8px 0"></div><div class="lines">'+
+      '<div><b style="font-size:16px">Gross profit</b><b style="font-size:16px;color:'+(gp>=0?'var(--ok)':'#e5484d')+'">'+u(gp)+'</b></div>'+
+      '<div><span>Profit margin</span><b style="color:'+(margin>=0?'var(--ok)':'#e5484d')+'">'+Math.round(margin)+'%</b></div>'+
+      (prv?'<div class="mut"><span>Previous period gross profit</span><span>'+u(p6Agg(cr.a,cr.b).rev-p6Exp(cr.a,cr.b).total)+'</span></div>':'')+
+      '</div></div>'+
+      '<div class="card"><b>Client credit held (unearned revenue)</b><div class="mut">'+u(Object.values(D.c).reduce(function(a,c){return a+(c.credit||0)},0))+'</div></div>';
+  }
+
+  if(P6.tab==='charts'){
+    var days30=[];var dlabels=[];
+    for(var i=29;i>=0;i--){var t=Date.now()-i*DAY6;var dk=ld6(t);dlabels.push(dk);days30.push(cur.daily[dk]||0)}
+    var skeys=Object.keys(cur.S).sort(function(a,b){return cur.S[b]-cur.S[a]}).slice(0,8);
+    var wdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    body='<div class="card"><b>Revenue last 30 days</b><div style="height:200px"><canvas id="ch1"></canvas></div></div>'+
+      '<div class="card"><b>Revenue by service</b><div style="height:220px"><canvas id="ch2"></canvas></div></div>'+
+      '<div class="card"><b>Revenue by day of week</b><div style="height:180px"><canvas id="ch3"></canvas></div></div>'+
+      '<div class="card"><b>Revenue vs expenses</b><div style="height:180px"><canvas id="ch4"></canvas></div></div>';
+    setTimeout(function(){
+      mkChart('ch1','line',dlabels,[lineDs('Revenue (UGX)',days30)],{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'var(--mut)',maxRotation:45}},y:{ticks:{color:'var(--mut)'},beginAtZero:true}}});
+      mkChart('ch2','bar',skeys,[barDs('Revenue',skeys.map(function(k){return Math.round(cur.S[k])}))],{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'var(--mut)'}},y:{ticks:{color:'var(--mut)'}}}});
+      mkChart('ch3','bar',wdays,[barDs('Revenue',cur.weekday.map(function(v){return Math.round(v)}))],{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'var(--mut)'}},y:{ticks:{color:'var(--mut)'},beginAtZero:true}}});
+      mkChart('ch4','bar',['Revenue','Expenses','Gross profit'],[barDs('',
+        [Math.round(cur.rev+subRev),Math.round(exp.total),Math.round(gp)],
+        [Math.round(gp)>=0?'rgba(26,157,107,0.7)':'rgba(229,72,77,0.7)','rgba(229,72,77,0.7)',Math.round(gp)>=0?'rgba(56,182,240,0.7)':'rgba(229,72,77,0.7)'])],
+        {plugins:{legend:{display:false}},scales:{x:{ticks:{color:'var(--mut)'}},y:{ticks:{color:'var(--mut)'},beginAtZero:true}}});
+    },100);
+  }
+
+  if(P6.tab==='lapsed'){
+    var lapsed=lapsedClients();
+    body='<div class="card mut" style="margin-bottom:10px">'+lapsed.length+' client'+(lapsed.length!==1?'s have':'has')+' not returned within their usual ordering cycle. The system calculates each client\'s average gap from their order history.</div>'+
+      (lapsed.map(function(x){
+        return'<div class="card"><div class="row"><b>'+esc(x.c.name)+'</b><span class="tag" style="color:#e5484d">'+x.overdue+' days overdue</span></div>'+
+        '<div class="mut">Usually orders every ~'+x.avgGap+' days • Last order '+x.daysSince+' days ago • '+x.orders+' orders total</div>'+
+        '<div class="row2"><a class="g" href="'+wl(x.p,'Hello '+esc(x.c.name)+', we miss you at Rioes Laundry! It\'s been '+x.daysSince+' days since your last order. Bring your laundry this week – we\'re ready for you!')+'" target="_blank" rel="noopener">Send win-back</a></div></div>';
+      }).join('')||'<div class="card mut">No lapsed clients detected. Either everyone is ordering on schedule (unlikely) or you need more order history.</div>');
+  }
+
+  if(P6.tab==='forecast'){
+    if(!fc){body='<div class="card mut">Not enough order history yet for a forecast. Place at least 7 orders over different days first.</div>'}
+    else{
+      var fcLabels=['Wk -6','Wk -5','Wk -4','Wk -3','Wk -2','Last wk','Forecast +1','Forecast +2','Forecast +3','Forecast +4'];
+      var history=fc.weeks.map(function(v){return Math.round(v)});
+      var fcData=Array(7).fill(null).concat(fc.next4.map(function(v){return Math.round(v)}));
+      body='<div class="card"><b>Revenue forecast – next 4 weeks</b>'+
+        '<div class="lines" style="margin:8px 0">'+
+        '<div><span>7-week average weekly revenue</span><b>'+u(Math.round(fc.avg))+'</b></div>'+
+        '<div><span>Trend</span><b style="color:'+(fc.trend>=0?'var(--ok)':'#e5484d')+'">'+(fc.trend>=0?'Growing ▲':'Declining ▼')+' '+u(Math.abs(Math.round(fc.trend)))+'/wk</b></div>'+
+        '</div><div style="height:220px"><canvas id="ch5"></canvas></div>'+
+        '<div class="mut" style="margin-top:8px">Forecast is a linear trend from the last 7 weeks of actual data. It does not account for school terms, promotions or unusual events. Treat it as a guide, not a guarantee.</div></div>'+
+        '<h3 style="margin:12px 0 6px">Next 4-week forecast</h3>'+
+        fc.next4.map(function(v,i){return'<div class="card"><div class="row"><b>Week +'+(i+1)+'</b><b>'+u(v)+'</b></div><div class="mut">'+(v>Math.round(fc.avg)?'Above average':'Below average')+' (avg: '+u(Math.round(fc.avg))+')</div></div>'}).join('');
+      setTimeout(function(){
+        mkChart('ch5','bar',fcLabels,[
+          barDs('Actual',history.concat(Array(4).fill(null)),'rgba(56,182,240,0.7)'),
+          barDs('Forecast',Array(6).fill(null).concat([history[6]]).concat(fc.next4),'rgba(26,157,107,0.5)')
+        ],{scales:{x:{ticks:{color:'var(--mut)'}},y:{beginAtZero:true,ticks:{color:'var(--mut)'}}},plugins:{legend:{labels:{color:'var(--ink)'}}}}); 
+      },100);
+    }
+  }
+
+  $('#view').innerHTML='<h2>Reports</h2>'+tabBar+periodBar+body;
+};
+</script>
 </body></html>
