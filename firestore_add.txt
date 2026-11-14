@@ -1,0 +1,7 @@
+
+    match /subs/{id} {
+      allow read: if isStaff();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (isStaff() && !changes().hasAny(['price','totalVisits','plan','status']));
+      allow delete: if isAdmin();
+    }

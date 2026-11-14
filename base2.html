@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rioes Laundry</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#38b6f0"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{--bg:#f3faff;--card:#fff;--ink:#0b2a3c;--mut:#5b7a8c;--sky:#38b6f0;--sky2:#1e8fc9;--tint:#e3f4fd;--line:#d3eaf7;--ok:#1a9d6b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a1a24;--card:#112633;--ink:#e6f4fb;--mut:#8fb2c5;--tint:#14384c;--line:#1f3d4f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0a1a24;--card:#112633;--ink:#e6f4fb;--mut:#8fb2c5;--tint:#14384c;--line:#1f3d4f;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Trebuchet MS","Segoe UI",system-ui,sans-serif}
+#app{display:flex;min-height:100vh}
+.side{display:none;width:220px;padding:20px 14px;background:var(--card);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;flex-direction:column;gap:6px}
+.brand{font-weight:700;font-size:20px;color:var(--sky2);margin-bottom:14px}
+.brand small{display:block;font-weight:400;font-size:12px;color:var(--mut)}
+.nb{border:0;background:none;color:var(--ink);text-align:left;padding:10px 12px;border-radius:10px;font:inherit;cursor:pointer}
+.nb.on{background:var(--tint);color:var(--sky2);font-weight:700}
+main{flex:1;padding:16px 14px 90px;max-width:960px;width:100%;margin:0 auto}
+.bottom{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.bottom .nb{text-align:center;font-size:11px;padding:8px 2px;border-radius:0}
+.bottom .nb span{display:block;font-size:19px}
+h2{margin:4px 0 12px;font-size:22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.stat b{display:block;font-size:20px;color:var(--sky2)}
+.mut{color:var(--mut);font-size:13px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.row2{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.tag{background:var(--tint);color:var(--sky2);padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700}
+button.p,button.g{border-radius:10px;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer;border:1px solid var(--sky)}
+button.p{background:var(--sky);color:#fff}button.g{background:none;color:var(--sky2)}
+a.g{display:inline-block;text-decoration:none;border-radius:10px;padding:9px 14px;font-weight:700;border:1px solid var(--sky);color:var(--sky2)}button.big{width:100%;padding:13px;font-size:16px;margin-top:10px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 4px}
+label.ck{display:flex;gap:8px;align-items:center;color:var(--ink);font-size:14px}label.ck input{width:auto}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px;border-radius:99px;font:inherit;font-size:13px;white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--sky);color:#fff;border-color:var(--sky)}
+.bar{height:10px;background:var(--sky);border-radius:5px;min-width:2px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:9}
+.lines div{display:flex;justify-content:space-between;padding:3px 0}
+@media(min-width:800px){.side{display:flex}.bottom{display:none}main{padding:28px 32px}.grid{grid-template-columns:repeat(4,1fr)}.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.toast{bottom:30px}}
+</style></head><body>
+<div id="app"><aside class="side" id="side"></aside><main id="view"></main></div>
+<nav class="bottom" id="bot"></nav>
+<script src="firebase-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function(){const C=window.FIREBASE_CONFIG;if(!C||!C.apiKey||/PASTE/i.test(C.apiKey)||typeof firebase==='undefined')return;
+firebase.initializeApp(C);const au=firebase.auth(),fs=firebase.firestore();fs.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+const clean=x=>JSON.parse(JSON.stringify(x)),
+enc=(p,x)=>clean(p=='settings/main'?{...x,sv:(x.sv||[]).map(s=>({n:s[0],p:s[1]}))}:x),
+dec=(p,x)=>p=='settings/main'&&x.sv?{...x,sv:x.sv.map(s=>[s.n,s.p])}:x;
+const db={collection:n=>({onSnapshot:(cb,eb)=>fs.collection(n).onSnapshot(s=>cb({docs:s.docs.map(d=>({id:d.id,data:()=>dec(n+'/'+d.id,d.data())}))}),eb)}),doc:p=>({set:x=>fs.doc(p).set(enc(p,x)),delete:()=>fs.doc(p).delete()})};
+let res;const ready=new Promise(r=>res=r);window.claude={use:()=>ready};
+document.body.insertAdjacentHTML('beforeend','<div id="lg" style="position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px"><div class="card" style="width:100%;max-width:360px"><h2 style="color:var(--sky2)">Rioes Laundry</h2><div class="mut">Sign in with the account your manager created for you.</div><label>Email</label><input id="le" type="email" autocomplete="username"><label>Password</label><input id="lp" type="password" autocomplete="current-password"><div id="lr" style="color:#e5484d;min-height:20px;margin-top:6px"></div><button class="p big" id="lb">Sign in</button><div style="text-align:center;margin-top:14px"><a href="#" id="lf" style="color:var(--sky2)">Forgot password?</a></div></div></div><button id="so" class="g" style="display:none;position:fixed;right:58px;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:6;padding:4px 10px">Sign out</button>');
+const q1=s=>document.querySelector(s);
+const go=()=>{q1('#lr').style.color='#e5484d';q1('#lr').textContent='';au.signInWithEmailAndPassword(q1('#le').value.trim(),q1('#lp').value).catch(()=>q1('#lr').textContent='Could not sign in. Check the email and password.')};
+q1('#lb').onclick=go;
+q1('#lf').onclick=ev=>{ev.preventDefault();const r=q1('#lr'),m=q1('#le').value.trim();r.style.color='#e5484d';if(!m){r.textContent='Type your email above first, then tap Forgot password.';return}
+au.sendPasswordResetEmail(m).then(()=>{r.style.color='#1a9d6b';r.textContent='If that email has an account, a reset link is on its way. Check your spam folder too.'}).catch(e=>{r.textContent=e.code=='auth/invalid-email'?'That email does not look right.':e.code=='auth/too-many-requests'?'Too many tries. Please wait a few minutes.':'Could not send the reset email. Try again.'})};q1('#lp').onkeydown=e=>{if(e.key=='Enter')go()};
+q1('#so').onclick=()=>au.signOut().then(()=>location.reload());
+au.onAuthStateChanged(u=>{q1('#lg').style.display=u?'none':'flex';q1('#so').style.display=u?'block':'none';window.ME=u?u.email:null;window.DN=u?u.displayName:null;if(u){fs.doc('users/'+u.email.toLowerCase()).get().then(d=>{window.ROLE=d.exists?d.data().role:null;window.UNAME=d.exists?d.data().name:null}).catch(()=>{window.ROLE=null}).then(()=>res(db))}});
+})();
+</script>
+<script>var vOrders,vRep1,vRep3,vDash0,vNew1,vNew2,vSet1,vSet2,vOrders0;
+function bkBanner(){} function tasks(){return[]} function vSubsPage(){}
+
+const S=['Received','Processing','Ready','Collected'];
+let PER=1000,WA={ready:'Hello {name}, your laundry (order {tag}) is ready for pickup at Rioes Laundry. Balance due: {bal}. Thank you!',readyd:'Hello {name}, your laundry (order {tag}) is ready for delivery. Balance due: {bal}. We will contact you to confirm the delivery time.',upd:'Hello {name}, order {tag} is now {st}.',unpaid:'Hello {name}, a friendly reminder: you have an unpaid balance of {bal} on order {tag}. Kindly pay by Mobile Money or cash.',survey:'Hi {name}, thank you for choosing Rioes Laundry! You now have {pts} loyalty points. How was order {tag}? Reply 1-5 (5 = excellent) and tell us what we can improve.',bday:'Happy birthday {name}! Enjoy 10% off your next order at Rioes Laundry this week.',back:'Hi {name}, we miss you at Rioes Laundry! Bring your next load this week and get double points.',receipt:'Rioes Laundry receipt {tag}\nDate: {date}\n{items}\nTotal: {total}\nPaid: {paid}\nBalance: {bal}\nLoyalty points: {pts}\nThank you {name}!'};
+let SV=[['Wash & fold (per kg)',3000],['Shirt / blouse',8000],['Suit (2-piece)',25000],['Dress',12000],['Duvet / blanket',20000],['Ironing only (piece)',1000],['Curtains (per panel)',10000]];
+const NAV=[['dash','🏠','Home'],['work','✅','Tasks'],['new','➕','New'],['orders','📋','Orders'],['cust','👥','Clients'],['subs','📦','Subs'],['rep','📊','Reports'],['set','⚙️','Settings']];
+let D={c:{},o:[],n:1001},DBH=null,last={},SY='Saved on this device only';
+try{const r=localStorage.getItem('rioes1');if(r)D=JSON.parse(r)}catch(e){}
+const ren=()=>{if(V!=='new')render()};
+function save(){try{localStorage.setItem('rioes1',JSON.stringify(D))}catch(e){}
+if(!DBH)return;const w=(p,x)=>{const j=JSON.stringify(x);if(last[p]===j)return;last[p]=j;DBH.doc(p).set(x).catch(()=>{delete last[p];SY='Cloud sync failed, retrying on next save';ren()})};
+D.o.forEach(o=>w('orders/'+o.id,o));Object.entries(D.c).forEach(([k,c])=>w('clients/'+k,c))}
+async function initDb(){try{if(typeof claude==='undefined')return;const db=await claude.use('db');if(!db){SY='Cloud storage unavailable: data stays on this device';ren();return}
+DBH=db;SY='Connecting to cloud storage…';ren();
+const feed=(name,apply)=>db.collection(name).onSnapshot(s=>{const m={};s.docs.forEach(d=>{m[name+'/'+d.id]={...d.data()};last[name+'/'+d.id]=JSON.stringify(d.data())});apply(m);SY='Saved to the cloud';save();ren()},e=>{SY='Cloud storage error: '+e.code;ren()});
+feed('orders',m=>{const mine=D.o.filter(o=>!(('orders/'+o.id) in m)&&last['orders/'+o.id]===undefined);D.o=[...Object.values(m),...mine].sort((a,b)=>b.id-a.id)});
+feed('clients',m=>{const c={};Object.entries(D.c).forEach(([k,v])=>{if(last['clients/'+k]===undefined)c[k]=v});Object.entries(m).forEach(([p,v])=>c[p.slice(8)]=v);D.c=c})}catch(e){SY='Cloud storage failed: data stays on this device';ren()}}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const u=n=>'UGX '+Math.round(n).toLocaleString();
+const ph=p=>{p=String(p).replace(/\D/g,'');if(p[0]=='0')p='256'+p.slice(1);return p};
+const tier=p=>'';
+let V='dash',q='',f='All';
+let draft={items:[],ph:'',name:'',express:false,paid:'',redeem:false};
+const nm=p=>(D.c[p]||{}).name||p;
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2200)}
+const wl=(p,t)=>'https://wa.me/'+p+'?text='+encodeURIComponent(t);
+function msg(o){const n=nm(o.ph),b=o.net-o.paid;
+if(o.st=='Ready')return `Hello ${n}, your laundry (order #${o.id}) is ready for pickup at Rioes Laundry. Balance due: ${u(b)}. Thank you!`;
+if(o.st=='Collected')return `Thank you ${n}! You now have ${D.c[o.ph].pts} loyalty points (${tier(D.c[o.ph].pts)}). See you soon.`;
+return `Hello ${n}, update on order #${o.id}: it is now at the ${o.st} stage.`}
+function cpm(id){const o=D.o.find(x=>x.id==id);try{navigator.clipboard.writeText(msg(o)).then(()=>toast('Message copied'),()=>toast('Copy blocked by browser'))}catch(e){toast('Copy blocked by browser')}}
+function adv(id){const o=D.o.find(x=>x.id==id),i=S.indexOf(o.st);if(i>=5)return;o.st=S[i+1];if(o.st=='Collected')o.paid=o.net;save();toast('Order #'+id+' → '+o.st);render()}
+function oc(o){const i=S.indexOf(o.st);return `<div class="card"><div class="row"><b>#${o.id} ${esc(nm(o.ph))}</b><span class="tag">${o.st}</span></div>
+<div class="mut">${o.items.map(x=>x.q+'× '+esc(x.n)).join(', ')}</div><div class="mut">${u(o.net)} • balance ${u(o.net-o.paid)}${o.express?' • express':''}</div>
+<div class="row2">${i<5?`<button class="p" onclick="adv(${o.id})">${i==4?'Collect & mark paid':'Move to '+S[i+1]}</button>`:''}<a class="g" href="${wl(o.ph,msg(o))}" target="_blank" rel="noopener">WhatsApp</a><button class="g" onclick="cpm(${o.id})">Copy message</button></div></div>`}
+function nav(){const h=NAV.map(n=>`<button class="nb ${V==n[0]?'on':''}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}</button>`).join('');
+$('#bot').innerHTML=h;$('#side').innerHTML='<div class="brand">Rioes Laundry<small>& Dry Cleaning, Kampala</small></div>'+h.replace(/<span>.*?<\/span>/g,m=>m.replace(/<\/?span>/g,'')+' ')}
+function go(v){V=v;q='';f='All';render();scrollTo(0,0)}
+function ROUTE(v){var FN={dash:function(){vDash()},work:function(){vWork()},new:function(){vNew()},orders:function(){vOrders()},cust:function(){vCust()},subs:function(){vSubsPage()},rep:function(){vRep()},set:function(){vSet()},reach:function(){vReach()},edit:function(){vEdit()},team:function(){vTeam()},audit:function(){vAudit()},ops:function(){vOps()},exp:function(){vExp()}};if(FN[v])FN[v]();else if(typeof vDash==='function')vDash()}
+function render(){nav();ROUTE(V)}
+function seed(){const n=Date.now(),d=864e5;D.c={'256772100200':{name:'Amina K.',pts:120,spent:120000,visits:6},'256701555123':{name:'Brian O.',pts:40,spent:40000,visits:2},'256759888777':{name:'Cynthia N.',pts:310,spent:310000,visits:11}};
+const mk=(id,p,it,st,t,ex)=>{const g=it.reduce((a,x)=>a+x.p*x.q,0);return{id,ph:p,items:it,express:ex,gross:g,disc:0,net:g,paid:st=='Collected'?g:Math.round(g/2),st,t}};
+D.o=[mk(1001,'256772100200',[{n:SV[0][0],p:3000,q:6}],'Collected',n-2*d,0),mk(1002,'256701555123',[{n:SV[2][0],p:25000,q:1}],'Ready',n-d,0),mk(1003,'256759888777',[{n:SV[1][0],p:8000,q:4},{n:SV[5][0],p:1000,q:4}],'Washing',n,1)];D.n=1004;save();render()}
+function vDash0(){const t=new Date().toDateString(),rev=D.o.filter(o=>new Date(o.t).toDateString()==t).reduce((a,o)=>a+o.paid,0),act=D.o.filter(o=>o.st!='Collected'),rd=D.o.filter(o=>o.st=='Ready');
+$('#view').innerHTML=`<h2>Today at the counter</h2><div class="mut" style="margin:-6px 0 10px">${SY}</div><div class="grid"><div class="stat">Cash in today<b>${u(rev)}</b></div><div class="stat">In progress<b>${act.length}</b></div><div class="stat">Ready for pickup<b>${rd.length}</b></div><div class="stat">Clients<b>${Object.keys(D.c).length}</b></div></div>
+${D.o.length?'':'<div class="card">No orders yet. Start with a real one, or load three demo orders to see how this behaves.<div class="row2"><button class="p" onclick="go(\'new\')">New order</button><button class="g" onclick="seed()">Load demo data</button></div></div>'}
+${rd.length?'<h2>Waiting for collection</h2><div class="cols">'+rd.map(oc).join('')+'</div>':''}`}
+function vNew(){const c=D.c[ph(draft.ph)];
+$('#view').innerHTML=`<h2>New order</h2><div class="card"><label>Phone number</label><input id="fp" inputmode="tel" placeholder="0772 123 456" value="${esc(draft.ph)}" oninput="draft.ph=this.value;lk()">
+<label>Name</label><input id="fn" value="${esc(draft.name)}" oninput="draft.name=this.value"><div id="lk" class="mut"></div></div>
+<div class="card"><label>Add item</label><div class="row2" style="margin:0"><select id="sv" style="flex:2">${SV.map((s,i)=>`<option value="${i}">${s[0]} – ${u(s[1])}</option>`).join('')}</select><input id="qt" type="number" min="1" value="1" style="flex:1;min-width:70px"><button class="p" onclick="addI()">Add</button></div>
+<div style="margin-top:8px">${draft.items.map((x,i)=>`<div class="row" style="padding:4px 0"><span>${x.q}× ${esc(x.n)} <span class="mut">@ ${u(x.p)}${x.sp&&x.sp!=x.p?' (was '+u(x.sp)+')':''}</span></span><span>${u(x.p*x.q)} <button class="g" style="padding:2px 8px" onclick="draft.items.splice(${i},1);vNew()">✕</button></span></div>`).join('')||'<span class="mut">No items yet.</span>'}</div></div>
+<div class="card"><label class="ck"><input type="checkbox" ${draft.express?'checked':''} onchange="draft.express=this.checked;calc()"> Express service (+30%)</label>
+<label>Redeem loyalty points</label><input type="number" min="0" step="${RPn()}" inputmode="numeric" placeholder="0" value="${esc(draft.rpts||'')}" oninput="draft.rpts=this.value;calc()"><div id="rdt" class="mut" style="margin-top:4px"></div>
+<label>Paid now (UGX)</label><input id="pd" type="number" inputmode="numeric" value="${esc(draft.paid)}" oninput="draft.paid=this.value"><div id="sum" class="lines" style="margin-top:10px"></div>
+<button class="p big" onclick="place()">Save order</button></div>`;lk()}
+function lk(){const c=D.c[ph(draft.ph)],e=$('#lk');if(c){if(!draft.name){draft.name=c.name;$('#fn').value=c.name}e.textContent=`Returning client • ${c.pts} points`}else e.textContent=draft.ph?'New client – they will be added on save.':'';calc()}
+function addI(){const s=SV[$('#sv').value],q=Math.max(1,+$('#qt').value||1),x=draft.items.find(i=>i.n==s[0]);if(x)x.q+=q;else draft.items.push({n:s[0],p:s[1],q});vNew()}
+function calc(){const g=draft.items.reduce((a,x)=>a+x.p*x.q,0),ex=draft.express?Math.round(g*.3):0,c=D.c[ph(draft.ph)],mx=c?Math.floor(c.pts/RPn())*RVn():0,disc=draft.redeem?Math.min(mx,g+ex):0,net=g+ex-disc;
+$('#rdt').textContent=`Redeem points (${c?c.pts:0} pts = ${u(mx)} off)`;
+$('#sum').innerHTML=`<div><span>Subtotal</span><span>${u(g)}</span></div>${ex?`<div><span>Express</span><span>${u(ex)}</span></div>`:''}${disc?`<div><span>Loyalty discount</span><span>−${u(disc)}</span></div>`:''}<div><b>Total</b><b>${u(net)}</b></div><div class="mut"><span>Points earned on this order</span><span>${Math.floor(net/PER)}</span></div>`;return{g,ex,disc,net}}
+function place(){const p=ph(draft.ph);if(p.length<10)return toast('Enter a valid phone number');if(!draft.items.length)return toast('Add at least one item');
+const{g,ex,disc,net}=calc();let c=D.c[p];if(!c)c=D.c[p]=Object.assign({name:draft.name||'Client',pts:0,spent:0,visits:0},ncv());if(draft.name)c.name=draft.name;
+c.pts-=Math.ceil(disc/2500)*50;c.pts+=Math.floor(net/1000);c.spent+=net;c.visits++;
+const pin=Math.max(0,+draft.paid||0),cu=typeof cred==='number'?cred:0,pp=Math.min(pin,net-cu),xs=pin-pp,paid=pp+cu,id=Math.max(1000,...D.o.map(o=>o.id))+1;c.credit=(c.credit||0)-cu+xs;if(xs>0)(c.tops=c.tops||[]).push({a:xs,m:draft.pm,t:Date.now()});D.o.unshift({id,ph:p,items:draft.items,express:draft.express,gross:g+ex,disc,net,paid,st:'Received',t:Date.now()});save();
+draft={items:[],ph:'',name:'',express:false,paid:'',redeem:false};toast('Order #'+id+' saved');V='orders';render()}
+function vOrders0(){$('#view').innerHTML=`<h2>Orders</h2><input placeholder="Search name, phone or order number" value="${esc(q)}" oninput="q=this.value;ol()" style="margin-bottom:10px"><div class="chips">${['All',...S].map(s=>`<button class="chip ${f==s?'on':''}" onclick="f='${s}';vOrders()">${s}</button>`).join('')}</div><div id="ol" class="cols"></div>`;ol()}
+function ol(){const t=q.toLowerCase(),r=D.o.filter(o=>(f=='All'||o.st==f)&&(!t||(o.id+' '+nm(o.ph)+' '+o.ph).toLowerCase().includes(t)));$('#ol').innerHTML=r.map(oc).join('')||'<div class="card mut">Nothing matches. Either a clean search or a very quiet day.</div>'}
+let cf={ph:'',name:'',pts:'',edit:false},rm='';
+function vCust(){$('#view').innerHTML=`<h2>Clients</h2><div class="card"><b>${cf.edit?'Edit client':'Add a client'}</b><label>Name</label><input value="${esc(cf.name)}" oninput="cf.name=this.value"><label>Phone number</label><input inputmode="tel" placeholder="0772 123 456" value="${esc(cf.ph)}" ${cf.edit?'readonly':''} oninput="cf.ph=this.value"><label>${cf.edit?'Loyalty points':'Starting loyalty points (optional)'}</label><input type="number" min="0" value="${esc(cf.pts)}" oninput="cf.pts=this.value"><div class="row2"><button class="p" onclick="saveC()">${cf.edit?'Save changes':'Add client'}</button>${cf.edit?'<button class="g" onclick="cf={ph:\'\',name:\'\',pts:\'\',edit:false};vCust()">Cancel</button>':''}</div></div><input placeholder="Search name or phone" value="${esc(q)}" oninput="q=this.value;cl()" style="margin-bottom:10px"><div id="cl" class="cols"></div>`;cl()}
+function saveC(){const p=ph(cf.ph),n=cf.name.trim();if(!n)return toast('Enter the client name');if(p.length<10)return toast('Enter a valid phone number');const e=D.c[p];if(e&&!cf.edit)return toast('That number already belongs to '+e.name);const pts=Math.max(0,Math.floor(+cf.pts||0));
+if(cf.edit){e.name=n;e.pts=pts}else D.c[p]={name:n,pts,spent:0,visits:0};save();toast(cf.edit?'Client updated':'Client added');cf={ph:'',name:'',pts:'',edit:false};vCust()}
+function editC(p){const c=D.c[p];cf={ph:p,name:c.name,pts:String(c.pts),edit:true};vCust();scrollTo(0,0)}
+function delC(p){if(rm!==p){rm=p;cl();setTimeout(()=>{if(rm===p){rm='';cl()}},4000);return}rm='';delete D.c[p];delete last['clients/'+p];if(DBH)DBH.doc('clients/'+p).delete().catch(()=>{SY='Could not delete in the cloud';ren()});save();toast('Client removed');cl()}
+function cl(){const t=q.toLowerCase(),r=Object.entries(D.c).filter(([p,c])=>!t||(c.name+' '+p).toLowerCase().includes(t)).sort((a,b)=>b[1].spent-a[1].spent);
+$('#cl').innerHTML=r.map(([p,c])=>`<div class="card"><div class="row"><b>${esc(c.name)}</b></div><div class="mut">+${p} • ${c.visits} visits • ${u(c.spent)} spent</div><div class="mut">${c.pts} points (worth ${u(Math.floor(c.pts/RPn())*RVn())})</div>
+<div class="row2"><a class="g" href="${wl(p,'Hello '+c.name+', you have '+c.pts+' loyalty points at Rioes Laundry. Bring your next load and redeem them!')}" target="_blank" rel="noopener">Send points reminder</a><button class="g" onclick="editC('${p}')">Edit</button><button class="g" onclick="delC('${p}')">${rm===p?'Tap again to remove':'Remove'}</button></div></div>`).join('')||'<div class="card mut">No clients found.</div>'}
+function vRep0(){const O=D.o,rev=O.reduce((a,o)=>a+o.paid,0),out=O.reduce((a,o)=>a+o.net-o.paid,0),sv={},st={};
+O.forEach(o=>{st[o.st]=(st[o.st]||0)+1;o.items.forEach(x=>sv[x.n]=(sv[x.n]||0)+x.p*x.q)});
+const days=[...Array(7)].map((_,i)=>{const d=new Date(Date.now()-(6-i)*864e5).toDateString();return[d.slice(0,3),O.filter(o=>new Date(o.t).toDateString()==d).reduce((a,o)=>a+o.paid,0)]}),mx=Math.max(1,...days.map(d=>d[1]));
+const top=Object.entries(D.c).sort((a,b)=>b[1].spent-a[1].spent).slice(0,5),liab=Object.values(D.c).reduce((a,c)=>a+Math.floor(c.pts/RPn())*RVn(),0);
+const csv='Order,Phone,Name,Status,Total,Paid,Date\n'+O.map(o=>[o.id,o.ph,'"'+nm(o.ph)+'"',o.st,o.net,o.paid,new Date(o.t).toISOString().slice(0,10)].join(',')).join('\n');
+$('#view').innerHTML=`<h2>Reports</h2><div class="grid"><div class="stat">Cash collected (all time)<b>${u(rev)}</b></div><div class="stat">Unpaid balances<b>${u(out)}</b></div><div class="stat">Orders<b>${O.length}</b></div><div class="stat">Loyalty owed<b>${u(liab)}</b></div></div>
+<div class="cols"><div class="card"><b>Last 7 days (cash in)</b>${days.map(d=>`<div class="row" style="margin-top:6px"><span class="mut" style="width:34px">${d[0]}</span><div style="flex:1"><div class="bar" style="width:${d[1]/mx*100}%"></div></div><span class="mut">${u(d[1])}</span></div>`).join('')}</div>
+<div class="card"><b>Revenue by service</b><div class="lines">${Object.entries(sv).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div><span>${esc(k)}</span><span>${u(v)}</span></div>`).join('')||'<span class="mut">No data yet.</span>'}</div></div>
+<div class="card"><b>Orders by status</b><div class="lines">${S.map(s=>`<div><span>${s}</span><span>${st[s]||0}</span></div>`).join('')}</div></div>
+<div class="card"><b>Top clients</b><div class="lines">${top.map(([p,c])=>`<div><span>${esc(c.name)}</span><span>${u(c.spent)}</span></div>`).join('')||'<span class="mut">No data yet.</span>'}</div></div></div>
+<div class="card"><b>Export (copy into Excel or Sheets)</b><textarea rows="5" readonly onclick="this.select()">${esc(csv)}</textarea></div>`}
+</script>
+<style>.bottom{grid-template-columns:repeat(7,1fr)}.bottom .nb{font-size:10px}.tk{border-left:4px solid var(--sky)}#tg{position:fixed;right:10px;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:6;padding:4px 10px}@media print{.side,.bottom,button,.toast,#tg,a.g,input,select{display:none!important}main{padding:0}}</style>
+<script>
+if(D.cfg){SV=D.cfg.sv||SV;PER=D.cfg.per||PER;WA={...WA,...D.cfg.wa}}
+let cfgDirty=false,seg=0;
+const DAY=864e5,ld=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},td=()=>ld(Date.now()),PM=['Cash','Mobile money'],tag=o=>'RL'+o.id,bal=o=>o.net-o.paid;
+const fill=(t,v)=>t.replace(/\{(\w+)\}/g,(m,k)=>v[k]!==undefined?v[k]:m);
+function vars(o){const c=D.c[o.ph]||{};return{name:c.name||o.ph,tag:tag(o),date:ld(o.t),st:o.st,bal:u(bal(o)),total:u(o.net),paid:u(o.paid),pts:c.pts||0,items:o.items.map(x=>x.q+'× '+x.n).join(', ')}}
+function msg(o){return fill(o.st=='Ready'?WA.ready:o.st=='Collected'?WA.done:WA.upd,vars(o))}
+const lastOrd=p=>Math.max(0,...D.o.filter(o=>o.ph==p).map(o=>o.t));
+function save(){D.cfg={sv:SV,per:PER,wa:WA};try{localStorage.setItem('rioes1',JSON.stringify(D))}catch(e){}
+if(!DBH)return;const w=(p,x)=>{const j=JSON.stringify(x);if(last[p]===j)return;last[p]=j;DBH.doc(p).set(x).catch(()=>{delete last[p];SY='Cloud sync failed, retrying on next save';ren()})};
+D.o.forEach(o=>w('orders/'+o.id,o));Object.entries(D.c).forEach(([k,c])=>w('clients/'+k,c));if(cfgDirty){cfgDirty=false;w('settings/main',D.cfg)}}
+async function initCfg(){try{if(typeof claude==='undefined')return;const db=await claude.use('db');if(!db)return;db.collection('settings').onSnapshot(s=>{s.docs.forEach(d=>{if(d.id=='main'){const c=d.data();SV=c.sv||SV;PER=c.per||PER;WA={...WA,...c.wa};last['settings/main']=JSON.stringify(c);D.cfg=c}});ren()})}catch(e){}}
+function nav(){const h=NAV.map(n=>`<button class="nb ${V==n[0]?'on':''}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}</button>`).join('');$('#bot').innerHTML=h;$('#side').innerHTML='<div class="brand">Rioes Laundry<small>& Dry Cleaning, Kampala</small></div>'+h.replace(/<span>(.*?)<\/span>/g,'$1 ')}
+function render(){D.o.forEach(o=>{if(!S.includes(o.st))o.st='Processing'});nav();ROUTE(V)}
+function tgl(){const r=document.documentElement,c=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=c=='dark'?'light':'dark';try{localStorage.setItem('rtheme',r.dataset.theme)}catch(e){}}
+function oc0(o){const i=S.indexOf(o.st),b=bal(o),late=o.exp&&o.st!='Collected'&&o.exp<td();
+return `<div class="card"><div class="row"><b>${tag(o)} ${esc(nm(o.ph))}</b><span class="tag">${o.st}</span></div><div class="mut">${o.items.map(x=>x.q+'× '+esc(x.n)).join(', ')}</div>
+<div class="mut">${u(o.net)} • paid ${u(o.paid)} • <b style="color:${b?'#e5484d':'var(--ok)'}">balance ${u(b)}</b></div>
+<div class="mut">Received: <input type="date" value="${ld(o.t)}" onchange="setT(${o.id},this.value)" style="width:auto;padding:2px 6px;display:inline-block"> ${new Date(o.t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+<div class="mut" ${late?'style="color:#e5484d"':''}>Pickup: ${o.exp||'not set'}${late?' (overdue)':''}${o.express?' • express':''}</div>
+${b>0?`<div class="row2"><input id="pa${o.id}" type="number" placeholder="Amount" style="flex:1;min-width:90px"><select id="pm${o.id}" style="flex:1;min-width:110px">${PM.map(m=>`<option>${m}</option>`).join('')}</select><button class="g" onclick="payO(${o.id})">Add payment</button></div>`:''}
+<div class="row2">${i<3?`<button class="p" onclick="adv(${o.id})">${i==2?'Mark collected':'Move to '+S[i+1]}</button>`:''}<a class="g" href="${wl(o.ph,msg(o))}" target="_blank" rel="noopener">WhatsApp</a><button class="g" onclick="rcpt(${o.id})">Receipt</button></div></div>`}
+function adv(id){const o=D.o.find(x=>x.id==id),i=S.indexOf(o.st);if(i>=3)return;o.st=S[i+1];if(o.st=='Collected')o.ct=Date.now();save();toast(tag(o)+' → '+o.st);render()}
+function payO(id){const o=D.o.find(x=>x.id==id),a=Math.min(bal(o),Math.max(0,+$('#pa'+id).value||0));if(!a)return toast('Enter an amount');o.paid+=a;(o.pays=o.pays||[]).push({a,m:$('#pm'+id).value,t:Date.now()});save();toast(u(a)+' recorded');render()}
+function ol(){const t=q.toLowerCase().replace(/^rl(?=\d)/,''),r=D.o.filter(o=>(f=='All'||o.st==f)&&(!t||(o.id+' '+nm(o.ph)+' '+o.ph).toLowerCase().includes(t)));$('#ol').innerHTML=r.map(oc).join('')||'<div class="card mut">Nothing matches.</div>'}
+function pick(v,isN){const t=v.trim().toLowerCase(),e=Object.entries(D.c).find(([p,c])=>(c.name+' · '+p).toLowerCase()==t||p==ph(v)||c.name.toLowerCase()==t);if(isN)draft.name=v;else draft.ph=v;if(e){draft.ph=e[0];draft.name=e[1].name;$('#fp').value=e[0];$('#fn').value=e[1].name}lk()}
+function vNew1(){draft.exp=draft.exp||'';draft.pm=draft.pm||'Cash';
+$('#view').innerHTML=`<h2>New order</h2><div class="card"><label>Client (type a name or number)</label><input id="fp" list="cs" autocomplete="off" placeholder="Name or 0772 123 456" value="${esc(draft.ph)}" oninput="pick(this.value)"><datalist id="cs">${Object.entries(D.c).map(([p,c])=>`<option value="${esc(c.name)} · ${p}">`).join('')}</datalist><label>Name</label><input id="fn" list="cs" value="${esc(draft.name)}" oninput="pick(this.value,1)"><div id="lk" class="mut"></div></div>
+<div class="card"><label>Add item</label><div class="row2" style="margin:0"><select id="sv" style="flex:2">${SV.map((s,i)=>`<option value="${i}">${esc(s[0])} – ${u(s[1])}</option>`).join('')}</select><input id="qt" type="number" min="1" value="1" style="flex:1;min-width:70px"><button class="p" onclick="addI()">Add</button></div><div style="margin-top:8px">${draft.items.map((x,i)=>`<div class="row" style="padding:4px 0"><span>${x.q}× ${esc(x.n)} <span class="mut">@ ${u(x.p)}${x.sp&&x.sp!=x.p?' (was '+u(x.sp)+')':''}</span></span><span>${u(x.p*x.q)} <button class="g" style="padding:2px 8px" onclick="draft.items.splice(${i},1);vNew()">✕</button></span></div>`).join('')||'<span class="mut">No items yet.</span>'}</div></div>
+<div class="card"><label>Order date (day it came in)</label><input type="date" value="${draft.dt||td()}" onchange="draft.dt=this.value"><label>Expected pickup / delivery date</label><input type="date" value="${draft.exp}" onchange="draft.exp=this.value"><label class="ck" style="margin-top:10px"><input type="checkbox" ${draft.express?'checked':''} onchange="draft.express=this.checked;calc()"> Express (+${EXL()})</label><label>Redeem loyalty points</label><input type="number" min="0" step="${RPn()}" inputmode="numeric" placeholder="0" value="${esc(draft.rpts||'')}" oninput="draft.rpts=this.value;calc()"><div id="rdt" class="mut" style="margin-top:4px"></div>
+<label>Paid now / deposit (UGX)</label><div class="row2" style="margin:0"><input id="pd" type="number" inputmode="numeric" value="${esc(draft.paid)}" oninput="draft.paid=this.value" style="flex:2"><select onchange="draft.pm=this.value" style="flex:1">${PM.map(m=>`<option ${draft.pm==m?'selected':''}>${m}</option>`).join('')}</select></div><div id="sum" class="lines" style="margin-top:10px"></div><button class="p big" onclick="place()">Save order</button></div>`;lk()}
+function place(){const p=ph(draft.ph);if(p.length<10)return toast('Pick a client or enter a valid phone number');if(!draft.items.length)return toast('Add at least one item');
+const{g,ex,disc,net}=calc();let c=D.c[p];if(!c)c=D.c[p]=Object.assign({name:draft.name||'Client',pts:0,spent:0,visits:0},ncv());if(draft.name)c.name=draft.name;
+c.pts-=Math.ceil(disc/2500)*50;c.pts+=Math.floor(net/PER);c.spent+=net;c.visits++;
+const pin=Math.max(0,+draft.paid||0),cu=typeof cred==='number'?cred:0,pp=Math.min(pin,net-cu),xs=pin-pp,paid=pp+cu,id=Math.max(1000,...D.o.map(o=>o.id))+1;c.credit=(c.credit||0)-cu+xs;if(xs>0)(c.tops=c.tops||[]).push({a:xs,m:draft.pm,t:Date.now()});
+D.o.unshift({id,ph:p,items:draft.items,express:draft.express,gross:g+ex,disc,net,paid,pays:[...(pp?[{a:pp,m:draft.pm,t:Date.now()}]:[]),...(cu?[{a:cu,m:'Account credit',t:Date.now()}]:[])],exp:draft.exp,st:'Received',t:(draft.dt&&draft.dt!=td()?new Date(draft.dt+'T12:00:00').getTime():Date.now())});
+save();draft={items:[],ph:'',name:'',express:false,paid:'',redeem:false,exp:'',pm:'Cash',dt:''};toast('RL'+id+' saved');V='orders';render()}
+const cfEmpty=()=>({ph:'',name:'',addr:'',room:'',bday:'',gen:'',pts:'',sp:'',sl:'',se:'',edit:false});cf=cfEmpty();
+const fi=(l,k,t='text',x='')=>`<label>${l}</label><input type="${t}" value="${esc(cf[k])}" ${x} oninput="cf.${k}=this.value">`;
+function vCust(){$('#view').innerHTML=`<h2>Clients</h2><div class="card"><b>${cf.edit?'Edit client':'Add a client'}</b>${fi('Name','name')}${fi('Mobile number','ph','tel',cf.edit?'readonly':'placeholder="0772 123 456"')}${fi('Address','addr')}${fi('Room number (optional)','room')}${fi('Birthday','bday','date')}<label>Gender</label><select onchange="cf.gen=this.value">${['','Female','Male','Other'].map(g=>`<option ${cf.gen==g?'selected':''}>${g}</option>`).join('')}</select>${fi('Loyalty points','pts','number')}<b style="display:block;margin-top:12px">Subscription (optional)</b>${fi('Plan name','sp')}${fi('Visits remaining','sl','number')}${fi('Expiry date','se','date')}
+<div class="row2"><button class="p" onclick="saveC()">${cf.edit?'Save changes':'Add client'}</button>${cf.edit?'<button class="g" onclick="cf=cfEmpty();vCust()">Cancel</button>':''}</div></div>
+<input placeholder="Search name or phone" value="${esc(q)}" oninput="q=this.value;cl()" style="margin-bottom:10px"><div class="chips">${[[0,'All'],[7,'1+ week'],[14,'2+ weeks'],[30,'1+ month'],[60,'2+ months'],[90,'3+ months']].map(s=>`<button class="chip ${seg==s[0]?'on':''}" onclick="seg=${s[0]};vCust()">${s[1]} away</button>`).join('').replace('All away','All')}</div><div id="cl" class="cols"></div>`;cl()}
+function saveC(){const p=ph(cf.ph),n=cf.name.trim();if(!n)return toast('Enter the client name');if(p.length<10)return toast('Enter a valid phone number');const e=D.c[p];if(e&&!cf.edit)return toast('That number belongs to '+e.name);
+const d={name:n,addr:cf.addr,room:cf.room||'',bday:cf.bday,gen:cf.gen,pts:Math.max(0,Math.floor(+cf.pts||0))};if(cf.sp||cf.sl||cf.se)d.sub={plan:cf.sp,left:+cf.sl||0,exp:cf.se};
+D.c[p]=Object.assign(e||{spent:0,visits:0},d);if(!d.sub)delete D.c[p].sub;save();toast(cf.edit?'Client updated':'Client added');cf=cfEmpty();vCust()}
+function editC(p){const c=D.c[p],s=c.sub||{};cf={ph:p,name:c.name,addr:c.addr||'',room:c.room||'',bday:c.bday||'',gen:c.gen||'',pts:String(c.pts),sp:s.plan||'',sl:s.left===undefined?'':String(s.left),se:s.exp||'',edit:true};vCust();scrollTo(0,0)}
+function useV(p){const s=D.c[p].sub;if(s&&s.left>0){s.left--;save();toast('Visit used, '+s.left+' left');cl()}}
+function cl0(){const t=q.toLowerCase(),now=Date.now(),r=Object.entries(D.c).map(([p,c])=>[p,c,lastOrd(p)]).filter(([p,c,l])=>(!t||(c.name+' '+p).toLowerCase().includes(t))&&(!seg||(l&&now-l>seg*DAY))).sort((a,b)=>b[1].spent-a[1].spent);
+$('#cl').innerHTML=r.map(([p,c,l])=>{const d=l?Math.floor((now-l)/DAY):null,s=c.sub;return `<div class="card"><div class="row"><b>${esc(c.name)}</b></div><div class="mut">+${p}${c.gen?' • '+c.gen:''}${c.bday?' • 🎂 '+c.bday:''}</div>${c.addr?`<div class="mut">${esc(c.addr)}${c.room?' • Room '+esc(c.room):''}</div>`:''}
+<div class="mut">${c.visits} visits • ${u(c.spent)} • ${c.pts} pts (${u(Math.floor(c.pts/RPn())*RVn())}) • ${d===null?'no orders yet':'last order '+d+' days ago'}</div>${s?`<div class="mut">📦 ${esc(s.plan||'Subscription')}: ${s.left} visits left${s.exp?', expires '+s.exp:''}</div>`:''}
+<div class="row2"><a class="g" href="${wl(p,fill(d>=7?WA.back:'Hello {name}, you have {pts} loyalty points at Rioes Laundry. Bring your next load and redeem them!',{name:c.name,pts:c.pts}))}" target="_blank" rel="noopener">${d>=7?'Win-back':'Points reminder'}</a>${s&&s.left>0?`<button class="g" onclick="useV('${p}')">Use visit</button>`:''}<button class="g" onclick="editC('${p}')">Edit</button><button class="g" onclick="delC('${p}')">${rm===p?'Tap again to remove':'Remove'}</button></div></div>`}).join('')||'<div class="card mut">No clients found.</div>'}
+function tasks0(){const T=[],now=Date.now(),t=td(),yr=t.slice(0,4);
+D.o.forEach(o=>{const v=vars(o);if(o.st!='Collected'&&o.exp&&o.exp<=t)T.push([o.exp<t?'⏰ Overdue':'⏰ Due today',tag(o)+' '+v.name+' ('+o.st+')']);
+if(bal(o)>0&&o.st!='Received'&&dueNow(o,now))T.push(['💰 Unpaid '+v.bal,tag(o)+' '+v.name,wl(o.ph,fill(WA.unpaid,v)),`nud(${o.id},'un')`]);
+if(o.st=='Collected'&&!o.fb)T.push(['⭐ Ask for feedback',tag(o)+' '+v.name,wl(o.ph,fill(WA.survey,v)),`nud(${o.id},'fb')`])});
+Object.entries(D.c).forEach(([p,c])=>{const l=lastOrd(p),s=c.sub;
+if(c.bday&&c.bday.slice(5)==t.slice(5)&&c.bn!=yr)T.push(['🎂 Birthday today',c.name,wl(p,fill(WA.bday,{name:c.name})),`nudC('${p}','bn')`]);
+if(l&&now-l>14*DAY&&now-(c.wn||0)>30*DAY)T.push(['👋 Win-back',c.name+', away '+Math.floor((now-l)/DAY)+' days',wl(p,fill(WA.back,{name:c.name})),`nudC('${p}','wn')`]);
+if(s&&((s.exp&&s.exp<=new Date(now+7*DAY).toISOString().slice(0,10))||s.left<=1)&&c.sx!=t)T.push(['📦 Subscription ending',c.name+': '+s.left+' visits left'+(s.exp?', expires '+s.exp:''),wl(p,'Hello '+c.name+', your '+(s.plan||'subscription')+' has '+s.left+' visits left'+(s.exp?' and expires on '+s.exp:'')+'. Renew to keep your savings!'),`nudC('${p}','sx')`])});return T}
+function nud(id,k){const o=D.o.find(x=>x.id==id);o[k]=k=='un'?Date.now():1;save();setTimeout(render,400)}
+function nudC(p,k){const c=D.c[p],t=td();c[k]=k=='bn'?t.slice(0,4):k=='sx'?t:Date.now();save();setTimeout(render,400)}
+const tk=T=>T.map(x=>`<div class="card tk" ${x[5]?`onclick="${x[5]}" style="cursor:pointer"`:''}><div class="row"><b>${x[0]}</b>${x[4]?`<button class="g" onclick="${x[4]}">Dismiss</button>`:''}${x[2]?`<a class="g" href="${x[2]}" target="_blank" rel="noopener" onclick="${x[3]}">Send</a>`:''}</div><div class="mut">${esc(x[1])}</div></div>`).join('')||'<div class="card mut">Nothing to chase. Go fold something.</div>';
+function vDash(){vDash0();bkBanner();$('#view').insertAdjacentHTML('beforeend','<h2>Team to-do</h2><div class="cols">'+tk(tasks())+'</div>')}
+function vWork(){const a=D.o.filter(o=>o.st!='Collected');$('#view').innerHTML=`<h2>Worker board</h2>${tk(tasks())}<h2 style="margin-top:16px">Active orders (${a.length})</h2>`+a.map(o=>{const i=S.indexOf(o.st);return `<div class="card row"><span><b>${tag(o)}</b> ${esc(nm(o.ph))}<br><span class="mut">${o.st} • in ${ld(o.t)}${o.exp?' • due '+o.exp:''}</span></span>${i<3?`<button class="p" onclick="adv(${o.id})">${i==2?'Collected':'→ '+S[i+1]}</button>`:''}</div>`}).join('')}
+const cs=()=>{cfgDirty=true;save();toast('Saved')};
+function addS(){const n=$('#ns').value.trim(),p=+$('#np').value;if(!n||!p)return toast('Enter a name and price');SV.push([n,p]);cs();vSet()}
+function vSet1(){const L={ready:'Ready for pickup',upd:'Status update',readyd:'Ready for delivery',unpaid:'Unpaid balance (every 3 days)',survey:'Thank you + feedback survey (after collection)',bday:'Birthday',back:'Win-back',receipt:'Receipt'};
+$('#view').innerHTML=`<h2>Settings</h2><div class="card"><b>Services &amp; prices</b>${SV.map((s,i)=>`<div class="row2"><input value="${esc(s[0])}" style="flex:2;min-width:140px" onchange="SV[${i}][0]=this.value;cs()"><input type="number" value="${s[1]}" style="flex:1;min-width:90px" onchange="SV[${i}][1]=+this.value||0;cs()"><button class="g" onclick="SV.splice(${i},1);cs();vSet()">✕</button></div>`).join('')}<div class="row2"><input id="ns" placeholder="New service name" style="flex:2;min-width:140px"><input id="np" type="number" placeholder="Price" style="flex:1;min-width:90px"><button class="p" onclick="addS()">Add</button></div></div>
+
+<div class="card"><b>WhatsApp messages</b><div class="mut">Placeholders: {name} {tag} {bal} {total} {paid} {pts} {st} {items} {date}</div>${Object.keys(L).map(k=>`<label>${L[k]}</label><textarea rows="3" onchange="WA['${k}']=this.value;cs()">${esc(WA[k])}</textarea>`).join('')}</div>`}
+function vRep1(){vRep0();const m={};D.o.forEach(o=>(o.pays||[]).forEach(p=>m[p.m]=(m[p.m]||0)+p.a));$('#view').insertAdjacentHTML('beforeend',`<div class="card"><b>Payments by method</b><div class="lines">${PM.map(k=>`<div><span>${k}</span><span>${u(m[k]||0)}</span></div>`).join('')}</div><div class="row2"><button class="p" onclick="window.print()">Print / Save as PDF</button></div></div>`)}
+try{const th=localStorage.getItem('rtheme');if(th)document.documentElement.dataset.theme=th}catch(e){}
+document.body.insertAdjacentHTML('beforeend','<button id="tg" class="g" onclick="tgl()">🌓</button>');
+render();initDb();initCfg();
+</script>
+<style>.bottom{grid-template-columns:repeat(8,1fr)}a.g.pr{background:var(--sky);color:#fff;display:block;text-align:center;padding:13px;font-size:16px;margin-bottom:12px}</style>
+<script>
+NAV.splice(5,0,['reach','📣','Reach']);
+WA.weekly=WA.weekly||'Hi {name}, new week at Rioes Laundry! Send us your laundry and we’ll return it fresh and ready. Reply here or drop by to place your order.';
+let rx={};
+function suggest(){const now=Date.now(),act=new Set(D.o.filter(o=>o.st!='Collected').map(o=>o.ph)),R=[];
+Object.entries(D.c).forEach(([p,c])=>{const ts=D.o.filter(o=>o.ph==p).map(o=>o.t).sort((a,b)=>a-b);if(!ts.length||act.has(p)||(c.wk&&now-c.wk<6*DAY))return;
+const gaps=ts.slice(1).map((t,i)=>(t-ts[i])/DAY),gap=gaps.length?Math.max(5,gaps.reduce((a,b)=>a+b,0)/gaps.length):14,days=(now-ts[ts.length-1])/DAY,over=days-gap;
+if(over>=-2)R.push({p,c,gap:Math.round(gap),days:Math.floor(days),over:Math.round(over)})});
+return R.sort((a,b)=>b.over-a.over)}
+function markW(p){D.c[p].wk=Date.now();save();setTimeout(render,400)}
+function cpy(t){try{navigator.clipboard.writeText(t).then(()=>toast('Copied'),()=>toast('Copy blocked by browser'))}catch(e){toast('Copy blocked by browser')}}
+function vReach(){const L=suggest(),sel=L.filter(x=>!rx[x.p]),nx=sel[0],txt=x=>fill(WA.weekly,{name:x.c.name});
+$('#view').innerHTML=`<h2>This week’s reach-out</h2><div class="card"><b>Weekly message</b><div class="mut">Use {name} for the client’s name. Edits save automatically.</div><textarea rows="4" onchange="WA.weekly=this.value;cs();vReach()">${esc(WA.weekly)}</textarea>
+</div>
+${nx?`<a class="g pr" href="${wl(nx.p,txt(nx))}" target="_blank" rel="noopener" onclick="markW('${nx.p}')">Send to next client (${sel.length} left): ${esc(nx.c.name)}</a>`:'<div class="card mut">Everyone due this week has been contacted. Go and fold something.</div>'}
+<h2 style="margin-top:16px">Who to contact (${L.length})</h2><div class="cols">${L.map(x=>`<div class="card"><div class="row"><label class="ck" style="margin:0"><input type="checkbox" ${rx[x.p]?'':'checked'} onchange="rx['${x.p}']=!this.checked;vReach()"> <b>${esc(x.c.name)}</b></label><span class="tag">${x.over>0?x.over+' days overdue':'due soon'}</span></div><div class="mut">Usually orders every ~${x.gap} days • last order ${x.days} days ago</div><div class="row2"><a class="g" href="${wl(x.p,txt(x))}" target="_blank" rel="noopener" onclick="markW('${x.p}')">Send</a></div></div>`).join('')||'<div class="card mut">Nobody is due yet. Place a few orders and the pattern shows up.</div>'}</div>`}
+function render(){D.o.forEach(o=>{if(!S.includes(o.st))o.st='Processing'});nav();ROUTE(V)}
+render();
+</script>
+<script>function setT(id,v){if(!v)return;const o=D.o.find(x=>x.id==id);o.t=new Date(v+'T12:00:00').getTime();save();toast('Order date updated');render()}</script><script>
+let kp=30;
+function kpiHtml(){const d=kp,now=Date.now(),a=d?now-d*DAY:0,first={},cnt={};
+D.o.forEach(o=>{cnt[o.ph]=(cnt[o.ph]||0)+1;if(!(o.ph in first)||o.t<first[o.ph])first[o.ph]=o.t});
+const C=(from,to)=>{const O=D.o.filter(o=>o.t>=from&&o.t<to),act=[...new Set(O.map(o=>o.ph))],nw=act.filter(p=>first[p]>=from).length;return{n:O.length,act:act.length,nw,ret:act.length-nw,aov:O.length?O.reduce((x,o)=>x+o.net,0)/O.length:0,base:Object.keys(first).filter(p=>first[p]<from).length}},
+cu=C(a,now+1),pv=d?C(now-2*d*DAY,a):null,all=Object.keys(cnt),rp=all.filter(p=>cnt[p]>1).length,pct=x=>Math.round(x*100)+'%',
+ch=(c,p)=>p?(c>=p?'▲ ':'▼ ')+Math.abs(Math.round((c-p)/p*100))+'% vs previous period':'';
+return `<div class="chips" style="margin-top:6px">${[[7,'7 days'],[30,'30 days'],[90,'90 days'],[0,'All time']].map(x=>`<button class="chip ${kp==x[0]?'on':''}" onclick="kp=${x[0]};vRep()">${x[1]}</button>`).join('')}</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:12px">
+<div class="stat">Client return rate<b>${d?pct(cu.act?cu.ret/cu.act:0):pct(all.length?rp/all.length:0)}</b><div class="mut">${d?cu.ret+' of '+cu.act+' clients who ordered had ordered before':rp+' of '+all.length+' clients ordered more than once'}</div>${d?`<div class="mut">All-time repeat rate: ${pct(all.length?rp/all.length:0)} (${rp}/${all.length})</div>`:''}</div>
+<div class="stat">New clients<b>${d?cu.nw:all.length}</b><div class="mut">${d?(cu.nw/(d/7)).toFixed(1)+' per week • client base grew '+(cu.base?pct(cu.nw/cu.base):'n/a')+(pv?' (previous period: '+pv.nw+' new)':''):'total clients with orders'}</div></div>
+<div class="stat">Average order value<b>${u(cu.aov)}</b><div class="mut">${cu.n} orders ${ch(cu.aov,pv&&pv.aov)}</div></div></div>`}
+function vRep3(){vRep1();$('#view h2').insertAdjacentHTML('afterend',kpiHtml())}
+render();
+</script>
+<script>
+function dl(){const b=new Blob([JSON.stringify({v:1,t:Date.now(),D})],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(bx);a.download='rioes-backup-'+td()+'.json';document.body.appendChild(a);a.click();a.remove();try{localStorage.setItem('rbk',Date.now())}catch(e){}toast('Backup downloaded');if(V=='dash')render()}
+function rs(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result),d=j.D||j;if(!d.c||!d.o)throw 0;D=d;if(D.cfg){SV=D.cfg.sv||SV;PER=D.cfg.per||PER;WA={...WA,...D.cfg.wa}}save();toast('Backup restored');render()}catch(e){toast('That file is not a valid backup')}};r.readAsText(f)}
+function bkBanner(){let t=0;try{t=+localStorage.getItem('rbk')||0}catch(e){}if(!DBH&&D.o.length&&Date.now()-t>7*DAY)$('#view').insertAdjacentHTML('afterbegin','<div class="card" style="border-color:var(--sky)"><b>Back up your data</b><div class="mut">Last backup: '+(t?ld(t):'never')+'. Your data lives in this browser only, so a backup protects you if the phone is lost or cleared.</div><div class="row2"><button class="p" onclick="dl()">Download backup</button></div></div>')}
+function vSet2(){vSet1();$('#view').insertAdjacentHTML('beforeend','<div class="card"><b>Backup &amp; restore</b><div class="mut">Download a backup file regularly and keep a copy on Google Drive. Restoring replaces what is on this device.</div><div class="row2"><button class="p" onclick="dl()">Download backup</button></div><label>Restore from a backup file</label><input type="file" accept=".json,application/json" onchange="rs(this)"></div>')}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+render();
+</script>
+<script>
+const OWN=()=>window.OWNERS||['mawejje2016@gmail.com'],isO=()=>!window.ME||OWN().map(x=>x.toLowerCase()).indexOf(window.ME.toLowerCase())>-1||window.ROLE==='admin';
+let dk='',dd=false,ed=null;
+function oc(o){return oc0(o).replace(/<a class="g" href="[^"]*" target="_blank" rel="noopener">Receipt<\/a>/,`<button class="g" onclick="rcpt(${o.id})">Receipt image</button>`).replace('>Pickup: ','>'+(o.mode=='Delivery'?'Delivery':'Pickup')+': ').replace('<div class="mut">Received:',(o.ins?`<div class="mut">📝 ${esc(o.ins)}</div>`:'')+(bal(o)>0?`<div class="mut">Payment due ${ld(o.t+(o.terms??3)*DAY)} (net ${o.terms??3} days)</div>`:'')+'<div class="mut">Received:').replace(/<\/div><\/div>$/,`${isO()?`<button class="g" onclick="eo(${o.id})">Edit</button>`:''}${isO()?`<button class="g" onclick="delO(${o.id})">${dk==o.id?'Tap again to delete':'Delete'}</button>`:''}</div></div>`)}
+function cl(){cl0();if(!isO())document.querySelectorAll('#cl .row2 button').forEach(b=>{if(/emove|^Edit$/.test(b.textContent))b.remove()})}
+function nav(){const W=['work','new','orders','cust','set'],N=NAV.filter(n=>isO()||W.includes(n[0])),h=N.map(n=>`<button class="nb ${V==n[0]?'on':''}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}</button>`).join('');$('#bot').style.gridTemplateColumns='repeat('+N.length+',1fr)';$('#bot').innerHTML=h;$('#side').innerHTML='<div class="brand">Rioes Laundry<small>& Dry Cleaning, Kampala</small></div>'+h.replace(/<span>(.*?)<\/span>/g,'$1 ')}
+function render(){D.o.forEach(o=>{if(!S.includes(o.st))o.st='Processing'});if(!isO()&&['dash','rep','reach','team','audit'].includes(V)&&V!=='subs')V='work';nav();ROUTE(V)}
+function delO(id){if(dk!==id){dk=id;render();setTimeout(()=>{if(dk===id){dk='';if(V=='orders')render()}},4000);return}dk='';const o=D.o.find(x=>x.id==id);if(!o)return;const c=D.c[o.ph];
+if(c){c.spent=Math.max(0,c.spent-o.net);c.visits=Math.max(0,c.visits-1);c.pts=Math.max(0,c.pts-Math.floor(o.net/PER)+(o.pu!==undefined?o.pu:Math.ceil((o.disc||0)/500)*5))}
+D.o=D.o.filter(x=>x.id!=id);delete last['orders/'+id];if(DBH)DBH.doc('orders/'+id).delete().catch(()=>{SY='Could not delete in the cloud (owner only)';ren()});save();toast('Order deleted');render()}
+function eo(id){ed=JSON.parse(JSON.stringify(D.o.find(x=>x.id==id)));V='edit';render();scrollTo(0,0)}
+function vEdit(){const o=ed;$('#view').innerHTML=`<h2>Edit ${tag(o)}</h2><div class="card"><label>Status</label><select onchange="ed.st=this.value">${S.map(s=>`<option ${o.st==s?'selected':''}>${s}</option>`).join('')}</select><label>Order date</label><input type="date" value="${ld(o.t)}" onchange="ed.t=new Date(this.value+'T12:00:00').getTime()"><label>Pickup or delivery</label><select onchange="ed.mode=this.value"><option ${o.mode!='Delivery'?'selected':''}>Pickup</option><option ${o.mode=='Delivery'?'selected':''}>Delivery</option></select><label>Date</label><input type="date" value="${o.exp||''}" onchange="ed.exp=this.value"><label>Special instructions</label><input value="${esc(o.ins||'')}" oninput="ed.ins=this.value"><label class="ck" style="margin-top:8px"><input type="checkbox" ${o.express?'checked':''} onchange="ed.express=this.checked"> Express (+${EXL()})</label></div>
+<div class="card"><b>Items</b>${o.items.map((x,i)=>`<div class="row2"><span style="flex:2;min-width:140px">${esc(x.n)}</span><input type="number" min="1" value="${x.q}" style="flex:1;min-width:70px" onchange="ed.items[${i}].q=Math.max(1,+this.value||1)"><input type="number" min="0" value="${x.p}" style="flex:1;min-width:80px" onchange="ed.items[${i}].p=Math.max(0,+this.value||0)"><button class="g" onclick="ed.items.splice(${i},1);vEdit()">✕</button></div>`).join('')}<div class="row2"><select id="es" style="flex:2">${SV.map((s,i)=>`<option value="${i}">${esc(s[0])}</option>`).join('')}</select><button class="g" onclick="addE()">Add item</button></div></div>
+<div class="row2"><button class="p" onclick="saveE()">Save changes</button><button class="g" onclick="V='orders';render()">Cancel</button></div>`}
+function addE(){const s=SV[$('#es').value];ed.items.push({n:s[0],p:s[1],q:1});vEdit()}
+function saveE(){const o=D.o.find(x=>x.id==ed.id),c=D.c[o.ph];if(!ed.items.length)return toast('An order needs at least one item');
+const g=ed.items.reduce((a,x)=>a+x.p*x.q,0),ex=ed.express?EXF(g):0,net=Math.max(0,g+ex-(o.gd||0)-(o.disc||0));
+if(c){c.spent+=net-o.net;c.pts=Math.max(0,c.pts+Math.floor(net/PER)-Math.floor(o.net/PER))}
+Object.assign(o,{ins:ed.ins!==undefined?ed.ins:(o.ins||''),mode:ed.mode||o.mode||'Pickup',st:ed.st,t:ed.t,exp:ed.exp,express:ed.express,items:ed.items,gross:g+ex,net});if(o.st=='Collected'&&!o.ct)o.ct=Date.now();save();toast('Order updated');V='orders';render()}
+const ad=n=>ld(Date.now()+n*DAY);
+function qa(i){const s=SV[i],x=draft.items.find(z=>z.n==s[0]);if(x)x.q++;else draft.items.push({n:s[0],p:s[1],q:1});vNew()}
+function rp(){const p=ph(draft.ph),l=D.o.filter(o=>o.ph==p).sort((a,b)=>b.t-a.t)[0];if(!l)return toast('Pick a client with a past order first');draft.items=JSON.parse(JSON.stringify(l.items));vNew()}
+function pk(n){draft.exp=ad(n);vNew()}
+function vNew2(){vNew1();const c=document.querySelectorAll('#view .card')[0];if(c)c.insertAdjacentHTML('afterend',`<div class="card"><b>Quick add</b><div class="chips" style="margin-top:8px">${SV.map((s,i)=>`<button class="chip" onclick="qa(${i})">+ ${esc(s[0].split(' (')[0])}</button>`).join('')}</div><div class="row2" style="margin-top:0"><button class="g" onclick="rp()">Repeat last order</button><button class="g" onclick="pk(1)">Pickup tomorrow</button><button class="g" onclick="pk(2)">+2 days</button><button class="g" onclick="pk(3)">+3 days</button></div></div>`)}
+function clrDemo(){if(!dd){dd=true;vSet();setTimeout(()=>{dd=false},5000);return}dd=false;const P=['256772100200','256701555123','256759888777'];
+D.o.filter(o=>P.includes(o.ph)).forEach(o=>{delete last['orders/'+o.id];if(DBH)DBH.doc('orders/'+o.id).delete().catch(()=>{})});D.o=D.o.filter(o=>!P.includes(o.ph));
+P.forEach(p=>{delete last['clients/'+p];if(D.c[p]){delete D.c[p];if(DBH)DBH.doc('clients/'+p).delete().catch(()=>{})}});save();toast('Demo data cleared');vSet()}
+function vSet(){vSet2();$('#view').insertAdjacentHTML('beforeend',`<div class="card"><b>Express service</b><label>Charge type</label><select onchange="WA.et=this.value;cs();vSet()"><option value="fixed" ${WA.et!='pct'?'selected':''}>Fixed sum (UGX)</option><option value="pct" ${WA.et=='pct'?'selected':''}>Percentage of the order (%)</option></select><label>${WA.et=='pct'?'Percentage (%)':'Amount (UGX)'}</label><input type="number" min="0" value="${EXv()}" onchange="WA.ev=Math.max(0,+this.value||0);cs()"></div>
+<div class="card"><b>Loyalty points</b><label>Earn: client spends this much (UGX) to get 1 point</label><input type="number" min="1" value="${PER}" onchange="PER=Math.max(1,+this.value||1000);cs();lc()"><label>Redeem: this many points (a block)</label><input type="number" min="1" value="${RPn()}" onchange="WA.rp=Math.max(1,Math.floor(+this.value||5));cs();lc()"><label>...are worth this much discount (UGX)</label><input type="number" min="1" value="${RVn()}" onchange="WA.rv=Math.max(1,+this.value||500);cs();lc()"><div class="mut" style="margin-top:10px">Try a sample spend to see what your rules give back:</div><input id="ls" type="number" value="50000" oninput="lc()" style="margin-top:4px"><div id="lc" style="margin-top:10px"></div></div><div class="card"><b>Team &amp; permissions</b><div class="mut">Signed in as ${esc(window.ME||'this device (no login)')} • ${isO()?'Owner':'Worker'}</div><div class="mut" style="margin-top:6px">Owners: ${esc(OWN().join(', '))}. Everyone else is an in-store operator: limited access, cannot edit submitted data, delete, or change settings.</div></div><div class="card"><b>Clear demo data</b><div class="mut">Removes the sample clients (Amina, Brian, Cynthia) and all their orders.</div><div class="row2"><button class="g" onclick="clrDemo()">${dd?'Tap again to confirm':'Clear demo data'}</button></div></div>`);lc()}
+</script>
+<script>
+function who(){let n=window.DN||window.UNAME;if(!n&&window.ME){n=window.ME.split('@')[0].replace(/[0-9]/g,'').split(/[._-]+/)[0];n=n?n[0].toUpperCase()+n.slice(1):''}return n||''}
+function hi(){if(V!='dash'&&V!='work')return;const h=$('#view h2');if(!h)return;const H=new Date().getHours(),g=H<12?'Good morning':H<17?'Good afternoon':'Good evening',n=who();
+h.innerHTML=g+(n?', '+esc(n):'')+(window.ME?' <span class="mut" style="font-size:13px;cursor:pointer" onclick="cn()" title="Change name">✎</span>':'');
+if(V=='work')h.insertAdjacentHTML('afterend','<div class="mut" style="margin:-6px 0 10px">Your board for today</div>')}
+function cn(){const n=prompt('What should we call you?',who());if(n===null||!n.trim())return;firebase.auth().currentUser.updateProfile({displayName:n.trim()}).then(()=>{window.DN=n.trim();render();toast('Name saved')}).catch(()=>toast('Could not save the name'))}
+const R0=render;render=function(){R0();hi()};
+</script>
+<script>
+const EXP=()=>{const v=parseFloat(WA.exp);return isNaN(v)?30:v};
+function msg(o){return fill(o.st=='Ready'?(o.mode=='Delivery'?WA.readyd:WA.ready):o.st=='Collected'?WA.survey:WA.upd,vars(o))}
+function calc(){const g=draft.items.reduce((a,x)=>a+x.p*x.q,0),ex=draft.express?Math.round(g*EXP()/100):0,c=D.c[ph(draft.ph)],mx=c?Math.floor(c.pts/RPn())*RVn():0,
+gd=Math.min(g+ex,draft.gdt=='%'?Math.round(g*(+draft.gdv||0)/100):(+draft.gdv||0)),disc=draft.redeem?Math.min(mx,g+ex-gd):0,net=g+ex-gd-disc;
+$('#rdt').textContent=`Redeem points (${c?c.pts:0} pts = ${u(mx)} off, in 5s)`;
+$('#sum').innerHTML=`<div><span>Subtotal</span><span>${u(g)}</span></div>${ex?`<div><span>Express (${EXP()}%)</span><span>${u(ex)}</span></div>`:''}${gd?`<div><span>Discount</span><span>−${u(gd)}</span></div>`:''}${disc?`<div><span>Loyalty points</span><span>−${u(disc)}</span></div>`:''}<div><b>Total</b><b>${u(net)}</b></div><div class="mut"><span>Points earned on this order</span><span>${Math.floor(net/PER)}</span></div>`;return{g,ex,gd,disc,net}}
+function addI(){const s=SV[$('#sv').value],q=Math.max(1,+$('#qt').value||1),pe=$('#pr'),pr=pe&&pe.value!==''?Math.max(0,+pe.value):s[1],x=draft.items.find(z=>z.n==s[0]&&z.p==pr);if(x)x.q+=q;else draft.items.push({n:s[0],p:pr,sp:s[1],q});vNew()}
+function place(){const p=ph(draft.ph);if(p.length<10)return toast('Pick a client or enter a valid phone number');if(!draft.items.length)return toast('Add at least one item');
+const{g,ex,gd,disc,net}=calc();let c=D.c[p];if(!c)c=D.c[p]=Object.assign({name:draft.name||'Client',pts:0,spent:0,visits:0},ncv());if(draft.name)c.name=draft.name;
+c.pts-=Math.ceil(disc/500)*5;c.pts+=Math.floor(net/PER);c.spent+=net;c.visits++;
+const pin=Math.max(0,+draft.paid||0),cu=typeof cred==='number'?cred:0,pp=Math.min(pin,net-cu),xs=pin-pp,paid=pp+cu,id=Math.max(1000,...D.o.map(o=>o.id))+1;c.credit=(c.credit||0)-cu+xs;if(xs>0)(c.tops=c.tops||[]).push({a:xs,m:draft.pm,t:Date.now()});
+D.o.unshift({id,ph:p,items:draft.items,express:draft.express,gross:g+ex,gd,gdl:draft.gdv?(draft.gdt=='%'?draft.gdv+'%':'UGX '+draft.gdv):'',disc,net,paid,pays:[...(pp?[{a:pp,m:draft.pm,t:Date.now()}]:[]),...(cu?[{a:cu,m:'Account credit',t:Date.now()}]:[])],exp:draft.exp,mode:draft.mode||'Pickup',ins:(draft.ins||'').trim(),terms:draft.terms??3,st:'Received',t:(draft.dt&&draft.dt!=td()?new Date(draft.dt+'T12:00:00').getTime():Date.now())});
+save();draft={items:[],ph:'',name:'',express:false,paid:'',redeem:false,exp:'',pm:'Cash',dt:'',gdt:'UGX',gdv:'',mode:'Pickup',ins:'',terms:3,useCr:false,nc:{}};toast('RL'+id+' saved');V='orders';render()}
+function nx(){const sv=$('#sv'),qt=$('#qt');if(sv&&qt){qt.insertAdjacentHTML('afterend','<input id="pr" type="number" inputmode="numeric" placeholder="Price" style="flex:1;min-width:90px">');const sp=()=>{$('#pr').value=SV[sv.value][1]};sv.onchange=sp;sp()}
+const d=document.querySelectorAll('#view input[type=date]')[1];if(d)d.closest('.card').insertAdjacentHTML('afterbegin',`<label style="margin-top:0">Pickup or delivery</label><select onchange="draft.mode=this.value"><option ${draft.mode!='Delivery'?'selected':''}>Pickup</option><option ${draft.mode=='Delivery'?'selected':''}>Delivery</option></select>`);
+const pd=$('#pd');if(pd)pd.closest('.row2').previousElementSibling.insertAdjacentHTML('beforebegin',`<label>Discount (optional)</label><div class="row2" style="margin:0"><input type="number" min="0" placeholder="0" value="${esc(draft.gdv||'')}" style="flex:2" oninput="draft.gdv=this.value;calc()"><select style="flex:1" onchange="draft.gdt=this.value;calc()"><option ${draft.gdt!='%'?'selected':''}>UGX</option><option ${draft.gdt=='%'?'selected':''}>%</option></select></div>`);calc()}
+function vNew(){vNew2();nx();clk()}
+function tasks(){const T=tasks0();D.o.forEach(o=>{if(o.st=='Ready'&&!o.rn)T.unshift(['📣 Send ready update',tag(o)+' '+nm(o.ph)+(o.mode=='Delivery'?' (delivery)':' (pickup)'),wl(o.ph,msg(o)),`nud(${o.id},'rn')`,`nud(${o.id},'rn')`])});return T}
+const sod=()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime()};
+const cashIn=(a,b)=>D.o.reduce((s,o)=>s+(o.pays&&o.pays.length?o.pays.filter(p=>p.t>=a&&p.t<b&&p.m!='Account credit').reduce((x,p)=>x+p.a,0):(o.t>=a&&o.t<b?o.paid:0)),0)+Object.values(D.c).reduce((s,c)=>s+(c.tops||[]).filter(p=>p.t>=a&&p.t<b).reduce((x,p)=>x+p.a,0),0),revE=(a,b)=>D.o.filter(o=>o.t>=a&&o.t<b).reduce((s,o)=>s+o.net,0);
+function tick(){const e=$('#clk'),n=new Date();if(e)e.textContent=n.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})+' • '+n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true})}
+function clk(){const h=$('#view h2');if(h){h.insertAdjacentHTML('afterend','<div id="clk" class="mut" style="font-size:12px;margin:-6px 0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>');tick()}}
+function vOrders(){vOrders0();clk()}
+function vRep(){vRep3();const g=document.querySelector('#view .grid'),a=kp?Date.now()-kp*DAY:0,b=Date.now()+1;if(g)g.insertAdjacentHTML('beforebegin',`<div class="card"><b>Revenue vs cash (${kp?'last '+kp+' days':'all time'})</b><div class="lines"><div><span>Revenue earned (billed on orders)</span><span>${u(revE(a,b))}</span></div><div><span>Cash collected (money received)</span><span>${u(cashIn(a,b))}</span></div><div><span>Still owed by clients (all time)</span><span>${u(D.o.reduce((s,o)=>s+o.net-o.paid,0))}</span></div><div><span>Client credit held (unearned revenue)</span><span>${u(Object.values(D.c).reduce((s,c)=>s+(c.credit||0),0))}</span></div></div></div>`)}
+const R1=render;render=function(){R1();if(V=='dash'){const g=document.querySelector('#view .grid');if(g){const a=sod(),b=a+864e5,f=g.firstElementChild;g.style.gridTemplateColumns='repeat(auto-fit,minmax(140px,1fr))';f.innerHTML='Cash collected today<b>'+u(cashIn(a,b))+'</b>';f.insertAdjacentHTML('beforebegin','<div class="stat">Revenue earned today<b>'+u(revE(a,b))+'</b></div>')}clk()}};
+setInterval(tick,1000);
+function rcpt(id){const o=D.o.find(x=>x.id==id),c=D.c[o.ph]||{},W=760,sub=o.items.reduce((a,i)=>a+i.p*i.q,0),n=4+(o.express?1:0)+(o.gd?1:0)+(o.disc?1:0),H=460+o.items.length*44+n*40,cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
+const T=(t,px,py,f,col,al)=>{x.font=f||'20px Arial';x.fillStyle=col||'#0b2a3c';x.textAlign=al||'left';x.fillText(t,px,py)};
+x.fillStyle='#fff';x.fillRect(0,0,W,H);x.fillStyle='#f8fcff';x.fillRect(0,0,W,130);x.fillStyle='#38b6f0';x.fillRect(0,0,W,120);x.fillStyle='#fff';x.font='bold 30px Arial';x.textAlign='left';x.fillText('Rioes Laundry',24,56);x.font='18px Arial';x.fillStyle='#e6f4fd';x.fillText('& Dry Cleaning  •  Kampala  •  RECEIPT',24,90);T('Rioes Laundry & Dry Cleaning',160,54,'bold 28px Arial','#1e8fc9');T('Kampala  •  RECEIPT',160,88,'18px Arial','#38b6f0');x.fillStyle='#38b6f0';x.fillRect(0,124,W,6);
+let y=170;T('Receipt no: '+tag(o),40,y,'bold 22px Arial');T('Date: '+ld(o.t),W-40,y,'22px Arial','#0b2a3c','right');
+y+=36;T('Client: '+(c.name||o.ph),40,y);T('Phone: +'+o.ph,W-40,y,'20px Arial','#5b7a8c','right');
+y+=36;T((o.mode=='Delivery'?'Delivery: ':'Pickup: ')+(o.exp||'to be confirmed'),40,y,'20px Arial','#5b7a8c');
+y+=44;x.fillStyle='#e3f4fd';x.fillRect(30,y-26,W-60,38);const B='bold 18px Arial';T('Item',44,y,B);T('Unit price',390,y,B,'','right');T('Qty',470,y,B,'','right');T('Line total',W-44,y,B,'','right');
+o.items.forEach(i=>{y+=44;T(String(i.n).slice(0,26),44,y,'19px Arial');T(Math.round(i.p).toLocaleString(),390,y,'19px Arial','','right');T(String(i.q),470,y,'19px Arial','','right');T(Math.round(i.p*i.q).toLocaleString(),W-44,y,'19px Arial','','right')});
+y+=18;x.fillStyle='#d3eaf7';x.fillRect(30,y,W-60,2);
+const L=(l,v,b)=>{y+=40;T(l,W-260,y,(b?'bold ':'')+'20px Arial','','right');T(v,W-44,y,(b?'bold ':'')+'20px Arial','','right')};
+L('Subtotal',u(sub));if(o.express)L('Express service',u(Math.round(o.gross-sub)));if(o.gd)L('Discount'+(o.gdl?' ('+o.gdl+')':''),'-'+u(o.gd));if(o.disc)L('Loyalty points','-'+u(o.disc));L('TOTAL',u(o.net),1);L('Paid',u(o.paid));L('Balance',u(o.net-o.paid),1);
+y+=70;T('Thank you for choosing Rioes Laundry!',W/2,y,'bold 22px Arial','#1e8fc9','center');T('Loyalty points: '+(c.pts||0),W/2,y+34,'18px Arial','#5b7a8c','center');
+cv.toBlob(bx=>{const f=new File([bx],tag(o)+'.png',{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],text:'Receipt '+tag(o)+' from Rioes Laundry'}).catch(()=>{});else{const a=document.createElement('a');a.href=URL.createObjectURL(bx);a.download=tag(o)+'.png';document.body.appendChild(a);a.click();a.remove();toast('Receipt image saved. Attach it in the WhatsApp chat.')}},'image/png')}
+</script>
+<script>
+const EXv=()=>{const v=parseFloat(WA.ev);return isNaN(v)?(WA.et=='pct'?30:10000):v},EXF=g=>WA.et=='pct'?Math.round(g*EXv()/100):EXv(),EXL=()=>WA.et=='pct'?EXv()+'%':u(EXv());
+const RPn=()=>{const v=Math.floor(parseFloat(WA.rp));return v>0?v:5},RVn=()=>{const v=parseFloat(WA.rv);return v>0?v:500};
+function calc(){const g=draft.items.reduce((a,x)=>a+x.p*x.q,0),ex=draft.express?EXF(g):0,c=D.c[ph(draft.ph)],pts=c?c.pts:0,RP=RPn(),RV=RVn(),
+gd=Math.min(g+ex,draft.gdt=='%'?Math.round(g*(+draft.gdv||0)/100):(+draft.gdv||0)),rem=g+ex-gd,v=Math.max(0,+draft.rpts||0);let err='';
+if(v>0){if(!Number.isInteger(v)||v%RP)err='Points must be in multiples of '+RP;else if(v>pts)err='Client only has '+pts+' points';else if(v/RP*RV>rem)err='More than the bill. Max for this bill: '+Math.floor(rem/RV)*RP+' points'}
+const pu=err?0:v,disc=pu/RP*RV,net=rem-disc,r=$('#rdt');
+if(r){r.style.color=err?'#e5484d':'';r.textContent=err||('Available: '+pts+' points (every '+RP+' = '+u(RV)+')'+(pu?' • using '+pu+' = '+u(disc)+' off':''))}
+$('#sum').innerHTML=`<div><span>Subtotal</span><span>${u(g)}</span></div>${ex?`<div><span>Express (${EXL()})</span><span>${u(ex)}</span></div>`:''}${gd?`<div><span>Discount</span><span>−${u(gd)}</span></div>`:''}${disc?`<div><span>Loyalty points (${pu})</span><span>−${u(disc)}</span></div>`:''}<div><b>Total</b><b>${u(net)}</b></div><div class="mut"><span>Points earned on this order</span><span>${Math.floor(net/PER)}</span></div>`;return{g,ex,gd,disc,pu,net,err}}
+function place(){const p=ph(draft.ph);if(p.length<10)return toast('Pick a client or enter a valid phone number');if(!draft.items.length)return toast('Add at least one item');
+const{g,ex,gd,disc,pu,net,err,cred}=calc();if(err)return toast(err);let c=D.c[p];if(!c)c=D.c[p]=Object.assign({name:draft.name||'Client',pts:0,spent:0,visits:0},ncv());if(draft.name&&isO())c.name=draft.name;
+c.pts-=pu;c.pts+=Math.floor(net/PER);c.spent+=net;c.visits++;
+const pin=Math.max(0,+draft.paid||0),cu=typeof cred==='number'?cred:0,pp=Math.min(pin,net-cu),xs=pin-pp,paid=pp+cu,id=Math.max(1000,...D.o.map(o=>o.id))+1;c.credit=(c.credit||0)-cu+xs;if(xs>0)(c.tops=c.tops||[]).push({a:xs,m:draft.pm,t:Date.now()});
+D.o.unshift({id,ph:p,items:draft.items,express:draft.express,gross:g+ex,gd,gdl:draft.gdv?(draft.gdt=='%'?draft.gdv+'%':'UGX '+draft.gdv):'',disc,pu,net,paid,pays:[...(pp?[{a:pp,m:draft.pm,t:Date.now()}]:[]),...(cu?[{a:cu,m:'Account credit',t:Date.now()}]:[])],exp:draft.exp,mode:draft.mode||'Pickup',ins:(draft.ins||'').trim(),terms:draft.terms??3,st:'Received',t:(draft.dt&&draft.dt!=td()?new Date(draft.dt+'T12:00:00').getTime():Date.now())});
+save();draft={items:[],ph:'',name:'',express:false,paid:'',rpts:'',exp:'',pm:'Cash',dt:'',gdt:'UGX',gdv:'',mode:'Pickup',ins:'',terms:3,useCr:false,nc:{}};toast('RL'+id+' saved');V='orders';render()}
+function lc(){const e=$('#lc');if(!e)return;const P=PER,RP=RPn(),RV=RVn(),sp=Math.max(0,+($('#ls')||{}).value||0),pts=Math.floor(sp/P),pv=RV/RP,pct=pv/P*100;
+e.innerHTML=`<div class="lines"><div><span>1 point is worth</span><span>${u(pv)}</span></div><div><span>Discount you give back</span><b>${pct.toFixed(1)}%</b></div><div><span>Spend needed for ${RP} points</span><span>${u(RP*P)}</span></div><div><span>A client spending ${u(sp)} earns</span><span>${pts} pts = ${u(Math.floor(pts/RP)*RV)}</span></div></div><div class="mut" style="margin-top:6px">Discount rate = (UGX per point ÷ spend per point) × 100.</div>`}
+</script>
+<script>
+function audit(act,what,detail){if(!DBH)return;const e={t:Date.now(),by:(window.ME||'').toLowerCase(),name:who()||window.ME||'',act,what,detail:detail||''};DBH.doc('audit/'+e.t+'-'+Math.random().toString(36).slice(2,6)).set(e).catch(()=>{})}
+function hook(n,f){const o=window[n];window[n]=function(){return f(o,arguments)}}
+const oid=id=>D.o.find(x=>x.id==id),RL=o=>'Order RL'+o.id;
+hook('adv',(o,a)=>{const x=oid(a[0]),f=x&&x.st;const r=o.apply(null,a);if(x&&x.st!=f)audit('status',RL(x),f+' → '+x.st);return r});
+hook('payO',(o,a)=>{const x=oid(a[0]),p=x&&x.paid,m=$('#pm'+a[0])&&$('#pm'+a[0]).value;const r=o.apply(null,a);if(x&&x.paid>p)audit('payment',RL(x),u(x.paid-p)+' ('+m+')');return r});
+hook('place',(o,a)=>{const n=D.o.length;const r=o.apply(null,a);if(D.o.length>n){const x=D.o[0];audit('add',RL(x),nm(x.ph)+', total '+u(x.net)+(x.mode=='Delivery'?', delivery':''))}return r});
+hook('saveE',(o,a)=>{const x=oid(ed&&ed.id),b=x&&JSON.parse(JSON.stringify(x));const r=o.apply(null,a);if(x){const c=[];['st','exp','mode','t','net'].forEach(k=>{if(b[k]!==x[k])c.push(k+': '+(b[k]??'-')+' → '+(x[k]??'-'))});if(JSON.stringify(b.items)!==JSON.stringify(x.items))c.push('items changed');if(c.length)audit('edit',RL(x),c.join('; '))}return r});
+hook('delO',(o,a)=>{const x=oid(a[0]),n=D.o.length;const r=o.apply(null,a);if(x&&D.o.length<n)audit('delete',RL(x),nm(x.ph)+', '+u(x.net));return r});
+hook('saveC',(o,a)=>{const p=ph(cf.ph),b=D.c[p]&&JSON.stringify(D.c[p]);const r=o.apply(null,a);const c=D.c[p];if(c&&JSON.stringify(c)!==b)audit(b?'edit':'add','Client '+c.name,'+'+p);return r});
+hook('delC',(o,a)=>{const c=D.c[a[0]];const r=o.apply(null,a);if(c&&!D.c[a[0]])audit('delete','Client '+c.name,'+'+a[0]);return r});
+hook('useV',(o,a)=>{const c=D.c[a[0]];const r=o.apply(null,a);if(c)audit('subscription','Client '+c.name,'visit used');return r});
+hook('cs',(o,a)=>{const r=o.apply(null,a);audit('settings','Settings','prices, loyalty, express or messages changed');return r});
+hook('clrDemo',(o,a)=>{const n=D.o.length;const r=o.apply(null,a);if(D.o.length<n)audit('delete','Demo data','cleared');return r});
+const R2=render;render=function(){if(window.ME&&!isO()&&window.ROLE!=='operator'){$('#bot').innerHTML='';$('#side').innerHTML='';$('#view').innerHTML='<div class="card" style="margin-top:40px"><b>No access yet</b><div class="mut" style="margin:8px 0">Your login works, but the admin has not given you a role. Ask the admin to add you under Settings, Team.</div><div class="row2"><button class="g" onclick="document.querySelector(\'#so\').click()">Sign out</button></div></div>';return}R2()};
+const _vs=vSet;vSet=function(){if(!isO())return vSetLimited();_vs();$('#view h2').insertAdjacentHTML('afterend','<div class="card"><b>Team &amp; audit</b><div class="row2"><button class="p" onclick="go(\'team\')">Manage team &amp; roles</button><button class="g" onclick="go(\'audit\')">View audit trail</button></div></div>')};
+function vSetLimited(){$('#view').innerHTML=`<h2>Settings</h2><div class="card"><b>My account</b><div class="mut">Signed in as ${esc(window.ME||'this device')} • In-store operator</div><div class="row2"><button class="g" onclick="cn()">Change my name</button></div></div><div class="card"><b>Services &amp; prices (view only)</b><div class="lines">${SV.slice().sort((a,b)=>a[0].localeCompare(b[0])).map(s=>`<div><span>${esc(s[0])}</span><span>${u(s[1])}</span></div>`).join('')}</div></div><div class="card mut">Prices, messages, loyalty, express charges and team settings are managed by the admin.</div>`}
+const noCloud=t=>'<h2>'+t+'</h2><div class="card mut">This needs the cloud version with sign-in.</div>';
+async function vTeam(){const v=$('#view');if(typeof firebase==='undefined'||!firebase.apps.length){v.innerHTML=noCloud('Team');return}
+v.innerHTML='<h2>Team &amp; roles</h2><div class="mut">Loading…</div>';let L=[];try{L=(await firebase.firestore().collection('users').get()).docs.map(d=>d.data())}catch(e){v.innerHTML='<h2>Team</h2><div class="card mut">Could not load the team ('+esc(e.code||e.message)+'). Publish the new Firestore rules first.</div>';return}
+const own=OWN().map(x=>x.toLowerCase());
+v.innerHTML=`<button class="g" onclick="go('set')">← Settings</button><h2>Team &amp; roles</h2><div class="card"><b>Add a team member</b><div class="mut">Create their login in Firebase (Authentication, Users, Add user) with the same email, then add them here.</div><label>Name</label><input id="tn"><label>Email</label><input id="te" type="email"><label>Role</label><select id="tr"><option value="operator">In-store operator (limited access)</option><option value="admin">Admin (full access)</option></select><div class="row2"><button class="p" onclick="addT()">Add</button></div></div>${own.map(e=>`<div class="card row"><span><b>${esc(e)}</b><br><span class="mut">Owner, always admin</span></span><span class="tag">Admin</span></div>`).join('')}${L.filter(x=>!own.includes(x.email)).map(x=>`<div class="card"><div class="row"><b>${esc(x.name||x.email)}</b><span class="mut">${esc(x.email)}</span></div><div class="row2"><select onchange="setR('${esc(x.email)}',this.value)"><option value="operator" ${x.role=='operator'?'selected':''}>In-store operator</option><option value="admin" ${x.role=='admin'?'selected':''}>Admin</option><option value="none" ${x.role=='none'?'selected':''}>No access</option></select></div></div>`).join('')||'<div class="card mut">No other team members yet.</div>'}`}
+function putT(email,name,role){const o={email,role,by:window.ME,t:Date.now()};if(name)o.name=name;return firebase.firestore().doc('users/'+email).set(o,{merge:true}).then(()=>audit('role','User '+email,'role set to '+role))}
+function addT(){const e=$('#te').value.trim().toLowerCase(),n=$('#tn').value.trim(),r=$('#tr').value;if(!/^\S+@\S+\.\S+$/.test(e))return toast('Enter a valid email');putT(e,n,r).then(()=>{toast('Team member added');vTeam()}).catch(()=>toast('Could not save (admin only)'))}
+function setR(e,r){putT(e,'',r).then(()=>toast('Role updated')).catch(()=>toast('Could not save (admin only)'))}
+let AU=[];
+async function vAudit(){const v=$('#view');if(typeof firebase==='undefined'||!firebase.apps.length){v.innerHTML=noCloud('Audit trail');return}
+v.innerHTML='<h2>Audit trail</h2><div class="mut">Loading…</div>';try{AU=(await firebase.firestore().collection('audit').orderBy('t','desc').limit(200).get()).docs.map(d=>d.data())}catch(e){v.innerHTML='<h2>Audit trail</h2><div class="card mut">Could not load ('+esc(e.code||e.message)+').</div>';return}
+v.innerHTML=`<button class="g" onclick="go('set')">← Settings</button><h2>Audit trail</h2><div class="mut" style="margin-bottom:8px">Latest 200 entries. Entries cannot be edited or deleted.</div><input placeholder="Search person, order, client or action" oninput="aList(this.value)" style="margin-bottom:10px"><div id="al"></div>`;aList('')}
+function aList(q){q=(q||'').toLowerCase();$('#al').innerHTML=AU.filter(e=>!q||(e.name+' '+e.by+' '+e.act+' '+e.what+' '+e.detail).toLowerCase().includes(q)).map(e=>`<div class="card"><div class="row"><b>${esc(e.what)}</b><span class="tag">${esc(e.act)}</span></div><div class="mut">${esc(e.detail)}</div><div class="mut">${esc(e.name||e.by)} • ${new Date(e.t).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true})}</div></div>`).join('')||'<div class="card mut">Nothing yet.</div>'}
+</script>
+<script>
+const dueNow=(o,now)=>{const due=o.t+(o.terms??3)*DAY,l=o.un&&o.un>=due?o.un:0;return now>=due&&now-l>=3*DAY};
+function ncv(){const n=draft.nc||{};return{addr:n.addr||'',room:n.room||'',bday:n.bday||'',gen:n.gen||''}}
+function ncf(){const p=ph(draft.ph),c=D.c[p],box=$('#nc'),cr=$('#cr');if(!box)return;draft.nc=draft.nc||{};
+if(p.length>=10&&!c)box.innerHTML=`<div style="margin:10px 0 2px;color:var(--sky2)"><b>New client</b> – add a few details</div><label>Location / address</label><input value="${esc(draft.nc.addr||'')}" oninput="draft.nc.addr=this.value"><label>Room number (optional)</label><input value="${esc(draft.nc.room||'')}" oninput="draft.nc.room=this.value"><label>Birthday</label><input type="date" value="${esc(draft.nc.bday||'')}" onchange="draft.nc.bday=this.value"><label>Gender</label><select onchange="draft.nc.gen=this.value">${['','Female','Male','Other'].map(g=>`<option ${draft.nc.gen==g?'selected':''}>${g}</option>`).join('')}</select>`;else box.innerHTML='';
+if(cr)cr.innerHTML=c&&c.credit>0?`<label class="ck"><input type="checkbox" ${draft.useCr?'checked':''} onchange="draft.useCr=this.checked;calc()"> Use account credit (${u(c.credit)} available)</label>`:''}
+hook('lk',(o,a)=>{const r=o.apply(null,a);ncf();return r});
+hook('calc',(o,a)=>{const r=o.apply(null,a),c=D.c[ph(draft.ph)],cred=draft.useCr&&c?Math.min(c.credit||0,r.net):0;r.cred=cred;const e=$('#sum');if(e){if(cred)e.insertAdjacentHTML('beforeend',`<div><span>Account credit applied</span><span>−${u(cred)}</span></div><div><b>Still to pay</b><b>${u(r.net-cred)}</b></div>`);const x=(+draft.paid||0)-(r.net-cred);if(x>0)e.insertAdjacentHTML('beforeend',`<div class="mut"><span>Extra paid, kept as client credit</span><span>${u(x)}</span></div>`)}return r});
+function ptc(v){const d=$('#ptd');if(v=='c'){d.style.display='block';d.focus()}else{d.style.display='none';draft.terms=+v}}
+hook('nx',(o,a)=>{const r=o.apply(null,a),sv=$('#sv');
+if(sv&&$('#pr')){sv.innerHTML=SV.map((s,i)=>[s,i]).sort((a,b)=>a[0][0].localeCompare(b[0][0])).map(([s,i])=>`<option value="${i}">${esc(s[0])} – ${u(s[1])}</option>`).join('');$('#pr').value=SV[sv.value][1];
+sv.closest('.row2').insertAdjacentHTML('beforebegin',`<input id="isq" list="ids" placeholder="Type to search items…" autocomplete="off" style="margin-bottom:8px"><datalist id="ids">${SV.map(s=>s[0]).sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`);
+$('#isq').oninput=function(){const t=this.value.trim().toLowerCase();if(!t)return;const m=SV.map((s,i)=>[s,i]).filter(([s])=>s[0].toLowerCase().includes(t)).sort((a,b)=>(a[0][0].toLowerCase().startsWith(t)?0:1)-(b[0][0].toLowerCase().startsWith(t)?0:1))[0];if(m){sv.value=m[1];$('#pr').value=m[0][1]}}}
+const lk=$('#lk');if(lk&&!$('#nc'))lk.insertAdjacentHTML('afterend','<div id="nc"></div>');
+const sm=$('#sum');if(sm&&!$('#cr'))sm.insertAdjacentHTML('beforebegin','<div id="cr"></div>');
+const pm=document.querySelector('#view select[onchange*="draft.mode"]');if(pm&&!$('#pt')){const t=draft.terms??3,std=[3,7,14,30].includes(t);pm.insertAdjacentHTML('afterend',`<label>Special instructions (optional)</label><input placeholder="None" value="${esc(draft.ins||'')}" oninput="draft.ins=this.value"><label>Payment terms (reminders start after the due date, then every 3 days)</label><div class="row2" style="margin:0"><select id="pt" onchange="ptc(this.value)" style="flex:2">${[3,7,14,30].map(n=>`<option value="${n}" ${t==n?'selected':''}>Net ${n} days${n==3?' (default)':''}</option>`).join('')}<option value="c" ${std?'':'selected'}>Custom…</option></select><input id="ptd" type="number" min="0" placeholder="Days" value="${std?'':t}" oninput="draft.terms=Math.max(0,+this.value||0)" style="flex:1;min-width:80px;display:${std?'none':'block'}"></div>`)}
+ncf();return r});
+let tu='';
+const CL=cl;cl=function(){CL();document.querySelectorAll('#cl .card').forEach(card=>{const m=card.innerText.match(/\+(\d{10,15})/);if(!m)return;const p=m[1],c=D.c[p]||{},row=card.querySelector('.row2');if(!row)return;
+if(c.credit>0)row.insertAdjacentHTML('beforebegin',`<div class="mut">Account credit: <b>${u(c.credit)}</b></div>`);
+row.insertAdjacentHTML('beforeend',`<button class="g" onclick="tu='${p}';cl()">Add credit</button>`);
+if(tu===p)row.insertAdjacentHTML('afterend',`<div class="row2"><input id="tua" type="number" placeholder="Amount (UGX)" style="flex:2;min-width:110px"><select id="tum" style="flex:1"><option>Cash</option><option>Mobile money</option></select><button class="p" onclick="topUp('${p}')">Save</button></div>`)})};
+function topUp(p){const a=Math.max(0,+$('#tua').value||0);if(!a)return toast('Enter an amount');const c=D.c[p];c.credit=(c.credit||0)+a;(c.tops=c.tops||[]).push({a,m:$('#tum').value,t:Date.now()});tu='';save();audit('payment','Client '+c.name,'credit top-up '+u(a)+' ('+$('#tum').value+')');toast(u(a)+' added to account credit');cl()}
+V=V;render();
+</script>
+<style>.bottom,.side{display:none!important}main{padding:58px 14px 40px!important}@media(min-width:800px){main{padding:58px 32px 40px!important}}#hb{position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:6;font-size:20px;line-height:1;padding:4px 12px}#dr .nb{width:100%;font-size:15px}</style>
+<script>
+document.body.insertAdjacentHTML('beforeend','<button id="hb" class="g" onclick="dr(1)" aria-label="Menu">☰</button><div id="ov" onclick="dr(0)" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40"></div><aside id="dr" style="position:fixed;top:0;bottom:0;left:0;width:270px;max-width:82vw;transform:translateX(-102%);transition:transform .2s;background:var(--card);border-right:1px solid var(--line);z-index:41;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 12px 20px;display:flex;flex-direction:column;gap:4px"></aside>');
+function dr(o){$('#dr').style.transform=o?'none':'translateX(-102%)';$('#ov').style.display=o?'block':'none'}
+hook('go',(o,a)=>{dr(0);return o.apply(null,a)});
+NAV.splice(4,0,['ops','🧺','Daily log'],['exp','💸','Expenses']);
+function nav(){const W=['work','new','orders','cust','subs','ops','exp'],N=NAV.filter(n=>isO()||W.includes(n[0]));
+$('#dr').innerHTML='<div class="brand">Rioes Laundry<small>'+esc(who()||'& Dry Cleaning, Kampala')+'</small></div>'+N.map(n=>`<button class="nb ${V==n[0]?'on':''}" onclick="go('${n[0]}')">${n[1]}&nbsp; ${n[2]}</button>`).join('')+(window.ME?'<button class="nb" style="margin-top:auto" onclick="dr(0);document.querySelector(\'#so\').click()">⎋&nbsp; Sign out</button>':'')}
+const ECD='Electricity|Water|Detergent & chemicals|Rent|Salaries & wages|Transport & delivery|Repairs & maintenance|Packaging|Airtime & internet|Other',ECAT=()=>(WA.ecat||ECD).split('|').filter(Boolean);
+let OPS={},EXS={},OPSREADY=false,of=null,oc_=false,oe=null,ef=null,ec=false,ee=null,exf='All',rj='';
+const cloud=()=>typeof firebase!=='undefined'&&firebase.apps&&firebase.apps.length,me_=()=>(window.ME||'local').toLowerCase();
+const ren2=()=>{const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&$('#view').contains(a))return;render()};
+function putDoc(col,id,obj){const M=col=='ops'?OPS:EXS;M[id]=obj;if(cloud())firebase.firestore().doc(col+'/'+id).set(obj).catch(e=>toast('Could not save: '+(e.code||'error')));else try{localStorage.setItem('rioes_'+col,JSON.stringify(M))}catch(e){}}
+async function initOps(){if(cloud()){await claude.use('db');const L=(c,M,f)=>firebase.firestore().collection(c).onSnapshot(s=>{Object.keys(M).forEach(k=>delete M[k]);s.docs.forEach(d=>M[d.id]=d.data());if(f)OPSREADY=true;if(['ops','exp','dash','work'].includes(V))ren2()},()=>{});L('ops',OPS,1);L('expenses',EXS)}else{try{OPS=JSON.parse(localStorage.getItem('rioes_ops')||'{}');EXS=JSON.parse(localStorage.getItem('rioes_expenses')||'{}')}catch(e){}OPSREADY=true}}
+const R3=render;render=function(){if((V=='ops'||V=='exp')&&!(window.ME&&!isO()&&window.ROLE!=='operator')){nav();return V=='ops'?vOps():vExp()}R3()};
+const dmy=d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+const prevFor=d=>{const k=Object.keys(OPS).filter(x=>x<d).sort().pop();return k?String(OPS[k].cur):''};
+const nz=v=>Math.max(0,+v||0);
+function vOps(){if(!of)of={date:td(),washed:'',prev:prevFor(td()),cur:'',notes:''};const adm=isO(),dup=!oe&&OPS[of.date],mo=td().slice(0,7),M=Object.values(OPS).filter(x=>x.date.slice(0,7)==mo),sum=k=>M.reduce((a,x)=>a+(+x[k]||0),0);
+
+const cf=`<div class="card" style="border-color:#e5484d"><b>Please confirm</b><div class="lines" style="margin:8px 0"><div><span>Date</span><span>${dmy(of.date)}</span></div><div><span>Orders washed</span><span>${esc(of.washed||'').slice(0,80)}</span></div><div><span>Meter reading</span><span>${of.prev} → ${of.cur}</span></div><div><b>Electricity used</b><b>${(+of.cur-+of.prev).toFixed(1)} kWh</b></div></div><div style="color:#e5484d;font-weight:bold">Once submitted, this entry cannot be edited. Only the admin can change it. Check every figure before you submit.</div><div class="row2"><button class="p" onclick="opsSave()">Yes, submit</button><button class="g" onclick="oc_=false;vOps()">Go back</button></div></div>`;
+$('#view').innerHTML=`<h2>Daily operations log</h2><div class="card"><b>${new Date(mo+'-01T00:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'})} so far</b><div class="lines"><div><span>Days logged</span><span>${M.length}</span></div><div><span>Washing loads / kg</span><span>${sum('loads')} / ${sum('kg')}</span></div><div><span>Electricity used</span><span>${sum('kwh').toFixed(1)} kWh</span></div></div></div>
+${dup&&!adm?`<div class="card"><b>${dmy(of.date)} is already logged ✓</b><div class="mut">Submitted entries can only be changed by the admin.</div><div class="row2"><button class="g" onclick="of=null;vOps()">Log another date</button></div></div>`:`<div class="card"><b>${oe?'Edit entry (admin)':'Log a day'}</b><label>Date</label><input type="date" value="${of.date}" ${oe?'disabled':''} onchange="of.date=this.value;of.prev=prevFor(this.value);vOps()"><label>Orders washed today (describe freely)</label><textarea rows="4" placeholder="e.g. Amina 2 bags, Cynthia duvet + 3 shirts, Brian suit…" oninput="of.washed=this.value" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical">${esc(of.washed||"")}</textarea><div style="margin-top:10px"><b>Electricity meter (kWh)</b></div><label>Previous meter reading (kWh)</label><input type="number" min="0" step="any" inputmode="decimal" value="${esc(of.prev)}" oninput="of.prev=this.value;ou()">
+<label>Current meter reading (kWh)</label><input type="number" min="0" step="any" inputmode="decimal" value="${esc(of.cur)}" oninput="of.cur=this.value;ou()">
+<div id="kwh" class="mut" style="margin-top:6px"></div>
+<label>Notes (optional)</label><input type="text" value="${esc(of.notes)}" oninput="of.notes=this.value">${oc_?'':`<div class="row2"><button class="p" onclick="opsReview()">${oe?'Save changes':'Review & submit'}</button>${oe?'<button class="g" onclick="of=null;oe=null;vOps()">Cancel</button>':''}</div>`}</div>${oc_?cf:''}`}
+<h2 style="margin-top:14px">History</h2>${Object.values(OPS).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,31).map(x=>`<div class="card"><div class="row"><b>${dmy(x.date)}</b><span class="tag">${(+x.kwh).toFixed(1)} kWh</span></div><div class="mut">${x.loads} loads • ${x.kg} kg • ${x.dry} drying loads • meter ${x.prev} → ${x.cur}</div>${x.notes?`<div class="mut">📝 ${esc(x.notes)}</div>`:''}<div class="mut">${esc(x.name||x.by)}${x.editedBy?' • edited by admin':''}</div>${adm?`<div class="row2"><button class="g" onclick="opsEdit('${x.date}')">Edit</button></div>`:''}</div>`).join('')||'<div class="card mut">No logs yet.</div>'}`;ou()}
+function ou(){const e=$('#kwh');if(e&&of){const k=+of.cur-+of.prev;e.innerHTML=of.cur===''||of.prev===''?'':(k<0?'<span style="color:#e5484d">Current reading is lower than the previous one</span>':'Electricity used: <b>'+k.toFixed(1)+' kWh</b>')}}
+function opsReview(){if(!of.date)return toast('Pick a date');if(!of.washed.trim())return toast('Describe the orders washed today');if(of.prev===''||of.cur==='')return toast('Enter both meter readings');if(+of.cur<+of.prev)return toast('Current reading cannot be lower than the previous one');if(!oe&&OPS[of.date])return toast('That date is already logged');if(oe)return opsSave();oc_=true;vOps();scrollTo(0,document.body.scrollHeight)}
+function opsSave(){const o=oe&&OPS[oe],d={date:of.date,washed:of.washed.trim(),prev:+of.prev,cur:+of.cur,kwh:+(+of.cur-+of.prev).toFixed(2),notes:of.notes||'',by:o?o.by:me_(),name:o?o.name:(who()||me_()),t:o?o.t:Date.now()};if(o){d.editedBy=me_();d.editedAt=Date.now()}
+putDoc('ops',d.date,d);audit(o?'edit':'add','Daily log '+d.date,d.loads+' loads, '+d.kg+' kg, '+d.kwh+' kWh');of=null;oc_=false;oe=null;toast(o?'Entry updated':'Daily log submitted');vOps()}
+function opsEdit(d){oe=d;oc_=false;of=Object.fromEntries(Object.entries(OPS[d]).map(([k,v])=>[k,String(v)]));vOps();scrollTo(0,0)}
+function vExp(){if(!ef)ef={date:td(),cat:ECAT()[0],desc:'',amt:'',pm:'Cash'};const adm=isO(),L=Object.values(EXS).filter(x=>exf=='All'||x.status==exf.toLowerCase()).sort((a,b)=>b.date.localeCompare(a.date)||b.t-a.t),days=[...new Set(L.map(x=>x.date))];
+const cf=`<div class="card" style="border-color:#e5484d"><b>Please confirm</b><div class="lines" style="margin:8px 0"><div><span>Date</span><span>${dmy(ef.date)}</span></div><div><span>Category</span><span>${esc(ef.cat)}</span></div><div><span>Description</span><span>${esc(ef.desc)}</span></div><div><b>Amount</b><b>${u(+ef.amt)}</b></div></div><div style="color:#e5484d;font-weight:bold">Once submitted, this expense cannot be edited. Only the admin can change it.${adm?'':' It will go to the admin for approval.'} Check every detail before you submit.</div><div class="row2"><button class="p" onclick="expSave()">Yes, submit</button><button class="g" onclick="ec=false;vExp()">Go back</button></div></div>`;
+$('#view').innerHTML=`<h2>Expenses</h2><div class="card"><b>${ee?'Edit expense (admin)':'Log an expense'}</b><label>Date</label><input type="date" value="${ef.date}" onchange="ef.date=this.value"><label>Category</label><select onchange="ef.cat=this.value">${ECAT().map(c=>`<option ${ef.cat==c?'selected':''}>${esc(c)}</option>`).join('')}</select><label>Description</label><input value="${esc(ef.desc)}" oninput="ef.desc=this.value"><label>Amount (UGX)</label><input type="number" min="0" inputmode="numeric" value="${esc(ef.amt)}" oninput="ef.amt=this.value"><label>Paid with</label><select onchange="ef.pm=this.value"><option ${ef.pm=='Cash'?'selected':''}>Cash</option><option ${ef.pm=='Mobile money'?'selected':''}>Mobile money</option></select>${ec?'':`<div class="row2"><button class="p" onclick="expReview()">${ee?'Save changes':adm?'Review & save':'Review & submit'}</button>${ee?'<button class="g" onclick="ef=null;ee=null;vExp()">Cancel</button>':''}</div>`}</div>${ec?cf:''}
+<div class="chips" style="margin-top:12px">${['All','Pending','Approved','Rejected'].map(s=>`<button class="chip ${exf==s?'on':''}" onclick="exf='${s}';vExp()">${s}${s=='Pending'&&adm?' ('+Object.values(EXS).filter(x=>x.status=='pending').length+')':''}</button>`).join('')}</div>
+${days.map(d=>{const D_=L.filter(x=>x.date==d);return `<h3 style="margin:14px 0 6px">${dmy(d)} <span class="mut" style="font-weight:normal">• approved ${u(D_.filter(x=>x.status=='approved').reduce((a,x)=>a+x.amt,0))}</span></h3>`+D_.map(x=>`<div class="card"><div class="row"><b>${esc(x.cat)}</b><span class="tag" style="${x.status=='rejected'?'color:#e5484d':x.status=='pending'?'':'color:var(--ok)'}">${x.status}</span></div><div>${esc(x.desc)} – <b>${u(x.amt)}</b> <span class="mut">(${esc(x.pm||'Cash')})</span></div><div class="mut">${esc(x.name||x.by)}${x.dname?' • '+x.status+' by '+esc(x.dname):''}${x.reason?' • reason: '+esc(x.reason):''}</div>${adm?`<div class="row2">${x.status=='pending'?`<button class="p" onclick="expDec('${x.id}','approved')">Approve</button><button class="g" onclick="rj='${x.id}';vExp()">Reject</button>`:''}<button class="g" onclick="expEdit('${x.id}')">Edit</button></div>${rj==x.id?`<div class="row2"><input id="rjr" placeholder="Reason for rejecting (required)" style="flex:2;min-width:160px"><button class="p" onclick="expDec('${x.id}','rejected',$('#rjr').value)">Confirm reject</button></div>`:''}`:''}</div>`).join('')}).join('')||'<div class="card mut">No expenses to show.</div>'}`}
+function expReview(){if(!ef.date)return toast('Pick a date');if(!ef.desc.trim())return toast('Add a description');if(!(+ef.amt>0))return toast('Enter the amount');if(ee)return expSave();ec=true;vExp();scrollTo(0,document.body.scrollHeight)}
+function expSave(){const o=ee&&EXS[ee],adm=isO(),id=o?o.id:String(Date.now()),d=Object.assign({},o||{},{id,date:ef.date,cat:ef.cat,desc:ef.desc.trim(),amt:+ef.amt,pm:ef.pm});
+if(!o){Object.assign(d,{status:adm?'approved':'pending',by:me_(),name:who()||me_(),t:Date.now(),reason:''});if(adm){d.dby=me_();d.dname=who()||me_();d.dt=Date.now();d.nsub=true;d.ndec=true}}else{d.editedBy=me_()}
+putDoc('expenses',id,d);audit(o?'edit':'add','Expense '+d.cat,u(d.amt)+' – '+d.desc+(o?'':' ('+d.status+')'));ef=null;ee=null;ec=false;toast(o?'Expense updated':adm?'Expense saved':'Submitted for approval');vExp()}
+function expEdit(id){const x=EXS[id];ee=id;ec=false;ef={date:x.date,cat:x.cat,desc:x.desc,amt:String(x.amt),pm:x.pm||'Cash'};vExp();scrollTo(0,0)}
+function expDec(id,st,reason){if(st=='rejected'&&!(reason||'').trim())return toast('Please give a reason for rejecting');const x=Object.assign({},EXS[id],{status:st,reason:(reason||'').trim(),dby:me_(),dname:who()||me_(),dt:Date.now(),ndec:false});putDoc('expenses',id,x);audit('status','Expense '+x.cat,u(x.amt)+' '+st+(x.reason?': '+x.reason:''));rj='';toast('Expense '+st);vExp()}
+hook('tasks',(o,a)=>{const T=o.apply(null,a);if(OPSREADY){const t=td(),y=ld(Date.now()-864e5);if(!OPS[t])T.unshift(['📋 Log today’s operations','Washing loads and electricity reading not submitted yet. Tap to log.',null,'',null,"go('ops')"]);if(Object.keys(OPS).length&&!OPS[y])T.push(['📋 Yesterday’s log is missing',dmy(y)+' has no wash or electricity entry.',null,'',null,"go('ops')"]);
+const p=Object.values(EXS).filter(x=>x.status=='pending').length;if(p&&isO())T.unshift(['💸 Expenses awaiting approval',p+' pending. Tap to review.',null,'',null,"go('exp')"])}return T});
+const _vs3=vSet;vSet=function(){_vs3();if(isO())$('#view').insertAdjacentHTML('beforeend',`<div class="card"><b>Expense categories</b><div class="mut">One per line. Staff pick from these when logging expenses.</div><textarea rows="8" onchange="WA.ecat=this.value.split('\\n').map(s=>s.trim()).filter(Boolean).join('|');cs()" style="margin-top:6px">${esc(ECAT().join('\n'))}</textarea></div>`)};
+initOps();render();
+</script>
+<script>
+render();initDb();initCfg();
+</script>
+</body></html>
