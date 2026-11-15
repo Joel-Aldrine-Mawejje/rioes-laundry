@@ -68,7 +68,7 @@ au.onAuthStateChanged(u=>{q1('#lg').style.display=u?'none':'flex';q1('#so').styl
 })();
 </script>
 <script>var vOrders,vRep1,vRep3,vDash0,vNew1,vNew2,vSet1,vSet2,vOrders0;
-function bkBanner(){} function tasks(){return[]} function vSubsPage(){}
+function bkBanner(){} function tasks(){return[]} function vSubsPage(){} var dkOps=''; var dkExp='';
 
 const S=['Received','Processing','Ready','Collected'];
 let PER=1000,WA={ready:'Hello {name}, your laundry (order {tag}) is ready for pickup at Rioes Laundry. Balance due: {bal}. Thank you!',readyd:'Hello {name}, your laundry (order {tag}) is ready for delivery. Balance due: {bal}. We will contact you to confirm the delivery time.',upd:'Hello {name}, order {tag} is now {st}.',unpaid:'Hello {name}, a friendly reminder: you have an unpaid balance of {bal} on order {tag}. Kindly pay by Mobile Money or cash.',survey:'Hi {name}, thank you for choosing Rioes Laundry! You now have {pts} loyalty points. How was order {tag}? Reply 1-5 (5 = excellent) and tell us what we can improve.',bday:'Happy birthday {name}! Enjoy 10% off your next order at Rioes Laundry this week.',back:'Hi {name}, we miss you at Rioes Laundry! Bring your next load this week and get double points.',receipt:'Rioes Laundry receipt {tag}\nDate: {date}\n{items}\nTotal: {total}\nPaid: {paid}\nBalance: {bal}\nLoyalty points: {pts}\nThank you {name}!'};
@@ -460,7 +460,7 @@ ${dup&&!adm?`<div class="card"><b>${dmy(of.date)} is already logged ✓</b><div 
 function ou(){const e=$('#kwh');if(e&&of){const k=+of.cur-+of.prev;e.innerHTML=of.cur===''||of.prev===''?'':(k<0?'<span style="color:#e5484d">Current reading is lower than the previous one</span>':'Electricity used: <b>'+k.toFixed(1)+' kWh</b>')}}
 function opsReview(){if(!of.date)return toast('Pick a date');if(!of.washed.trim())return toast('Describe the orders washed today');if(of.prev===''||of.cur==='')return toast('Enter both meter readings');if(+of.cur<+of.prev)return toast('Current reading cannot be lower than the previous one');if(!oe&&OPS[of.date])return toast('That date is already logged');if(oe)return opsSave();oc_=true;vOps();scrollTo(0,document.body.scrollHeight)}
 function opsSave(){const o=oe&&OPS[oe],d={date:of.date,washed:of.washed.trim(),prev:+of.prev,cur:+of.cur,kwh:+(+of.cur-+of.prev).toFixed(2),notes:of.notes||'',by:o?o.by:me_(),name:o?o.name:(who()||me_()),t:o?o.t:Date.now()};if(o){d.editedBy=me_();d.editedAt=Date.now()}
-putDoc('ops',d.date,d);audit(o?'edit':'add','Daily log '+d.date,d.loads+' loads, '+d.kg+' kg, '+d.kwh+' kWh');of=null;oc_=false;oe=null;toast(o?'Entry updated':'Daily log submitted');vOps()}
+putDoc('ops',d.date,d);audit(o?'edit':'add','Daily log '+d.date,(d.washed||'').slice(0,50)+', '+d.kwh+' kWh');of=null;oc_=false;oe=null;toast(o?'Entry updated':'Daily log submitted');vOps()}
 function opsEdit(d){oe=d;oc_=false;of=Object.fromEntries(Object.entries(OPS[d]).map(([k,v])=>[k,String(v)]));vOps();scrollTo(0,0)}
 function vExp(){if(!ef)ef={date:td(),cat:ECAT()[0],desc:'',amt:'',pm:'Cash'};const adm=isO(),L=Object.values(EXS).filter(x=>exf=='All'||x.status==exf.toLowerCase()).sort((a,b)=>b.date.localeCompare(a.date)||b.t-a.t),days=[...new Set(L.map(x=>x.date))];
 const cf=`<div class="card" style="border-color:#e5484d"><b>Please confirm</b><div class="lines" style="margin:8px 0"><div><span>Date</span><span>${dmy(ef.date)}</span></div><div><span>Category</span><span>${esc(ef.cat)}</span></div><div><span>Description</span><span>${esc(ef.desc)}</span></div><div><b>Amount</b><b>${u(+ef.amt)}</b></div></div><div style="color:#e5484d;font-weight:bold">Once submitted, this expense cannot be edited. Only the admin can change it.${adm?'':' It will go to the admin for approval.'} Check every detail before you submit.</div><div class="row2"><button class="p" onclick="expSave()">Yes, submit</button><button class="g" onclick="ec=false;vExp()">Go back</button></div></div>`;
@@ -1045,5 +1045,420 @@ vRep=function(){
 
   $('#view').innerHTML='<h2>Reports</h2>'+tabBar+periodBar+body;
 };
+</script>
+<script>
+/* ===== PATCHES + PHASE 7: CRM ===== */
+
+/* --- PATCH 1: Fix ops history (remove undefined loads/kg/dry, add delete) --- */
+var _vOpsOrig=vOps;
+vOps=function(){
+  if(!of)of={date:td(),washed:'',prev:prevFor(td()),cur:'',notes:''};
+  var adm=isO(),mo=td().slice(0,7),M=Object.values(OPS).filter(function(x){return x.date.slice(0,7)===mo}),kwh=M.reduce(function(a,x){return a+(+x.kwh||0)},0);
+  var dup=!oe&&OPS[of.date];
+  var cf='<div class="card" style="border-color:#e5484d"><b>Please confirm</b><div class="lines" style="margin:8px 0"><div><span>Date</span><span>'+dmy(of.date)+'</span></div><div><span>Orders washed</span><span>'+esc((of.washed||'').slice(0,100))+'</span></div><div><span>Meter</span><span>'+of.prev+' → '+of.cur+' ('+( +of.cur - +of.prev).toFixed(1)+' kWh)</span></div></div><div style="color:#e5484d;font-weight:bold">Once submitted this cannot be edited. Only the admin can change it.</div><div class="row2"><button class="p" onclick="opsSave()">Yes, submit</button><button class="g" onclick="oc_=false;vOps()">Go back</button></div></div>';
+  $('#view').innerHTML='<h2>Daily operations log</h2>'+
+    '<div class="card"><b>'+new Date(mo+'-01T00:00:00').toLocaleDateString('en-GB',{month:'long',year:'numeric'})+' so far</b>'+
+    '<div class="lines"><div><span>Days logged</span><span>'+M.length+'</span></div><div><span>Electricity used</span><span>'+kwh.toFixed(1)+' kWh</span></div></div></div>'+
+    (dup&&!adm?'<div class="card"><b>'+dmy(of.date)+' is already logged ✓</b><div class="mut">Only the admin can change submitted entries.</div><div class="row2"><button class="g" onclick="of=null;vOps()">Log another date</button></div></div>':
+    '<div class="card"><b>'+(oe?'Edit entry (admin)':'Log a day')+'</b>'+
+    '<label>Date</label><input type="date" value="'+of.date+'" '+(oe?'disabled':'')+' onchange="of.date=this.value;of.prev=prevFor(this.value);vOps()">'+
+    '<label>Orders washed today (describe freely)</label>'+
+    '<textarea rows="4" placeholder="e.g. Amina 2 bags, Cynthia duvet + 3 shirts…" oninput="of.washed=this.value" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical">'+esc(of.washed||'')+'</textarea>'+
+    '<label>Previous meter reading (kWh)</label><input type="number" min="0" step="any" inputmode="decimal" value="'+esc(of.prev)+'" oninput="of.prev=this.value;ou()">'+
+    '<label>Current meter reading (kWh)</label><input type="number" min="0" step="any" inputmode="decimal" value="'+esc(of.cur)+'" oninput="of.cur=this.value;ou()">'+
+    '<div id="kwh" class="mut" style="margin-top:6px"></div>'+
+    '<label>Notes (optional)</label><input type="text" value="'+esc(of.notes)+'" oninput="of.notes=this.value">'+
+    (oc_?'':'<div class="row2"><button class="p" onclick="opsReview()">'+(oe?'Save changes':'Review & submit')+'</button>'+(oe?'<button class="g" onclick="of=null;oe=null;vOps()">Cancel</button>':'')+'</div>')+
+    '</div>'+(oc_?cf:''))+
+    '<h2 style="margin-top:14px">History</h2>'+
+    Object.values(OPS).sort(function(a,b){return b.date.localeCompare(a.date)}).slice(0,31).map(function(x){
+      return'<div class="card"><div class="row"><b>'+dmy(x.date)+'</b><span class="tag">'+((+x.kwh)||0).toFixed(1)+' kWh</span></div>'+
+      '<div class="mut">'+(x.washed?esc(x.washed.slice(0,100)):x.loads!==undefined?x.loads+' loads, '+x.kg+' kg':'No items recorded')+'</div>'+
+      '<div class="mut">Meter: '+(x.prev||'—')+' → '+(x.cur||'—')+'</div>'+
+      (x.notes?'<div class="mut">📝 '+esc(x.notes)+'</div>':'')+
+      '<div class="mut">'+esc(x.name||x.by)+(x.editedBy?' • edited by admin':'')+'</div>'+
+      (adm?'<div class="row2"><button class="g" onclick="opsEdit(\''+x.date+'\')">Edit</button><button class="g" onclick="delOps(\''+x.date+'\')">'+(dkOps===x.date?'Tap again to delete':'Delete')+'</button></div>':'')+
+      '</div>';
+    }).join('')||'<div class="card mut">No logs yet.</div>';
+  ou();
+};
+var dkOps='';
+function delOps(d){if(!isO())return;if(dkOps!==d){dkOps=d;vOps();setTimeout(function(){if(dkOps===d){dkOps='';vOps()}},4000);return}dkOps='';var o=OPS[d];delete OPS[d];if(DBH)DBH.doc('ops/'+d).delete().catch(function(){});audit('delete','Daily log '+d,(o&&o.washed)||'');toast('Entry deleted');vOps()}
+
+/* --- PATCH 2: Expense delete for admin --- */
+var _vExpOrig=vExp;
+vExp=function(){
+  _vExpOrig();
+  if(!isO())return;
+  setTimeout(function(){
+    document.querySelectorAll('#view .card').forEach(function(card){
+      var m=card.innerHTML.match(/expEdit\('([^']+)'\)/);
+      var id=m&&m[1];
+      if(!id||card.querySelector('[data-delbtn]'))return;
+      var row=card.querySelector('.row2');if(!row)return;
+      var btn=document.createElement('button');btn.className='g';btn.dataset.delbtn='1';
+      btn.textContent=dkExp===id?'Tap again to delete':'Delete';
+      btn.onclick=function(){delExp(id)};row.appendChild(btn);
+    });
+  },50);
+};
+var dkExp='';
+function delExp(id){if(!isO())return;if(dkExp!==id){dkExp=id;vExp();setTimeout(function(){if(dkExp===id){dkExp='';vExp()}},4000);return}dkExp='';var x=EXS[id];delete EXS[id];delete last['expenses/'+id];if(DBH)DBH.doc('expenses/'+id).delete().catch(function(){});audit('delete','Expense '+(x&&x.cat),u((x&&x.amt)||0));toast('Expense deleted');vExp()}
+
+/* --- PATCH 3: Excess payment prompt --- */
+var _payOOrig=payO;
+payO=function(id){
+  var o=D.o.find(function(x){return x.id===id}),bl_before=bal(o),a=Math.min(bl_before,Math.max(0,+$('#pa'+id).value||0)),extra=Math.max(0,+$('#pa'+id).value-bl_before);
+  _payOOrig(id);
+  if(extra>0){var c=D.c[o.ph];toast(u(extra)+' excess added to '+((c&&c.name)||'client')+'\'s account credit');render()}
+};
+/* Also show credit balance inline on client card */
+var _cl0=cl0;cl0=function(){
+  _cl0();
+  document.querySelectorAll('#cl .card').forEach(function(card){
+    var m=card.innerText.match(/\+(\d{10,15})/);if(!m)return;
+    var c=D.c[m[1]];if(!c||!c.credit)return;
+    if(card.querySelector('.credit-line'))return;
+    var d=document.createElement('div');d.className='mut credit-line';d.textContent='Account credit: '+u(c.credit);
+    card.querySelector('.row2').before(d);
+  });
+};
+
+/* --- PATCH 4: Client detail view (tap name to see full profile + orders) --- */
+var cliDet=null;
+var _vCust0=vCust;
+vCust=function(){if(cliDet)return vClientDetail(cliDet);_vCust0()};
+function vClientDetail(p){
+  var c=D.c[p]||{};
+  var orders=D.o.filter(function(o){return o.ph===p}).sort(function(a,b){return b.t-a.t});
+  var totalUnpaid=orders.filter(function(o){return o.st!=='Collected'||bal(o)>0}).reduce(function(a,o){return a+bal(o)},0);
+  var totalSpent=orders.reduce(function(a,o){return a+o.net},0);
+  $('#view').innerHTML='<button class="g" onclick="cliDet=null;render()">← Clients</button>'+
+    '<h2>'+esc(c.name||p)+'</h2>'+
+    '<div class="card"><div class="lines">'+
+    '<div><span>Phone</span><span>+'+p+'</span></div>'+
+    (c.addr?'<div><span>Address</span><span>'+esc(c.addr)+(c.room?' • Room '+c.room:'')+'</span></div>':'')+
+    (c.bday?'<div><span>Birthday</span><span>'+c.bday+'</span></div>':'')+
+    (c.gen?'<div><span>Gender</span><span>'+esc(c.gen)+'</span></div>':'')+
+    '<div><span>Total orders</span><span>'+orders.length+'</span></div>'+
+    '<div><span>Total spent</span><span>'+u(totalSpent)+'</span></div>'+
+    '<div><span>Loyalty points</span><span>'+(c.pts||0)+'</span></div>'+
+    (c.credit?'<div><span style="color:var(--ok)">Account credit</span><span>'+u(c.credit)+'</span></div>':'')+
+    (totalUnpaid?'<div><span style="color:#e5484d">Total unpaid balance</span><b style="color:#e5484d">'+u(totalUnpaid)+'</b></div>':'')+
+    (c.sub?'<div><span>Subscription</span><span>'+esc(c.sub.plan||'Active')+'  •  '+c.sub.left+' visits left'+(c.sub.exp?' • expires '+c.sub.exp:'')+'</span></div>':'')+
+    '</div>'+
+    '<div class="row2"><button class="p" onclick="cf=cfEmpty();cf.ph=\''+p+'\';cf.name=\''+esc(c.name||'')+'\';cf.addr=\''+(c.addr||'')+'\';cf.room=\''+(c.room||'')+'\';cf.bday=\''+(c.bday||'')+'\';cf.gen=\''+(c.gen||'')+'\';cf.pts=\''+(c.pts||0)+'\';cf.edit=true;cliDet=null;go(\'cust\')">Edit client</button></div>'+
+    '</div>'+
+    '<h2 style="margin-top:14px">Order history ('+orders.length+')</h2>'+
+    orders.map(function(o){
+      var b=bal(o);
+      return'<div class="card"><div class="row"><b>RL'+o.id+'</b><span class="tag">'+o.st+'</span></div>'+
+      '<div class="mut">'+ld(o.t)+' • '+(o.mode||'Pickup')+(o.exp?' • pickup: '+o.exp:'')+'</div>'+
+      '<div class="mut">'+o.items.map(function(x){return x.q+'× '+esc(x.n)}).join(', ')+'</div>'+
+      '<div class="mut">Total: '+u(o.net)+' • Paid: '+u(o.paid)+(b>0?' • <b style="color:#e5484d">Balance: '+u(b)+'</b>':'')+'</div>'+
+      (o.ins?'<div class="mut">📝 '+esc(o.ins)+'</div>':'')+
+      '</div>';
+    }).join('')||'<div class="card mut">No orders yet.</div>';
+}
+/* Make client name clickable */
+var _cl_orig=cl;
+cl=function(){
+  _cl_orig();
+  document.querySelectorAll('#cl .card b').forEach(function(b){
+    var card=b.closest('.card');if(!card)return;
+    var m=card.innerText.match(/\+(\d{10,15})/);if(!m)return;
+    var p=m[1];b.style.cursor='pointer';b.style.color='var(--sky2)';b.style.textDecoration='underline';
+    b.onclick=function(e){e.stopPropagation();cliDet=p;render()};
+  });
+};
+
+/* --- PATCH 5: Client total unpaid shown on card --- */
+var _cl0b=cl0;
+cl0=function(){
+  _cl0b();
+  document.querySelectorAll('#cl .card').forEach(function(card){
+    var m=card.innerText.match(/\+(\d{10,15})/);if(!m)return;
+    var orders=D.o.filter(function(o){return o.ph===m[1]});
+    var totalUnpaid=orders.reduce(function(a,o){return a+bal(o)},0);
+    if(totalUnpaid>0&&!card.querySelector('.unpaid-line')){
+      var d=document.createElement('div');d.className='mut unpaid-line';
+      d.innerHTML='Total unpaid: <b style="color:#e5484d">'+u(totalUnpaid)+'</b>';
+      card.querySelector('.row2').before(d);
+    }
+  });
+};
+
+/* --- PATCH 6: Credit balance in Reports P&L --- */
+var _vRepOrig7=vRep;
+vRep=function(){
+  _vRepOrig7();
+  if(P6.tab==='pl'){
+    var cred=Object.entries(D.c).filter(function(e){return(e[1].credit||0)>0}).sort(function(a,b){return(b[1].credit||0)-(a[1].credit||0)});
+    if(cred.length){
+      var html='<div class="card"><b>Client credit balances (unearned revenue)</b><div class="lines">'+
+        cred.map(function(e){return'<div><span>'+esc(e[1].name||e[0])+'</span><span>'+u(e[1].credit)+'</span></div>'}).join('')+
+        '<div><b>Total</b><b>'+u(cred.reduce(function(a,e){return a+(e[1].credit||0)},0))+'</b></div>'+
+        '</div></div>';
+      var view=$('#view');if(view)view.insertAdjacentHTML('beforeend',html);
+    }
+  }
+};
+
+/* ============ PHASE 7: COMMERCIAL CRM ============ */
+var CRM={},crmDet=null,crmFilt='All',crmSv='',crmNew=false;
+var CRM_STAGES=['Target','Contacted','Discovery','Qualified','Meeting','Proposal','Pilot','Won','Lost','Nurture'];
+var CRM_SECTORS=['Hospitality','Healthcare','Education','Corporate offices','Restaurants & catering','Salons','Spas','Retail','Manufacturing','Events Venues'];
+var CRM_CHANNELS=['Phone call','WhatsApp','In-person visit','Email','Referral'];
+var CRM_OUTCOMES=['','Won','Lost','Deferred'];
+var CRM_LOSS=['','No fit','No response','Price','Timing','Contract','Capacity','Other'];
+var crmEmpty=function(){return{id:'',name:'',sector:'',location:'',contactName:'',role:'',phone:'',channel:'Phone call',decisionMaker:'',procSteps:'',contractReview:'',currentArrangement:'',need:'',pain:'',volumeItems:'',volumeFreq:'',scope:'',qualScore:'',qualBand:'',stage:'Target',lastContactDate:'',lastContactChannel:'',lastContactPerson:'',lastContactSummary:'',nextAction:'',actionOwner:'',nextActionDate:'',proposalDate:'',proposalAmt:'',monthlyRevenue:'',grossMargin:'',outcome:'',lossReason:'',notes:'',tasks:[],history:[]}};
+var cef=crmEmpty();
+
+function crmBand(s){var n=+s;return n>=9?'Strong':n>=6?'Medium':n>0?'Weak':''}
+function crmId(){return'ACC-'+String(Object.keys(CRM).length+1).padStart(3,'0')+'-'+Date.now().toString(36).slice(-3).toUpperCase()}
+function putCRM(a){CRM[a.id]=a;if(DBH)DBH.doc('crm/'+a.id).set(a).catch(function(){});audit('crm','CRM '+a.id,a.name+' – '+a.stage)}
+function delCRM(id){delete CRM[id];if(DBH)DBH.doc('crm/'+id).delete().catch(function(){});audit('delete','CRM '+id,'')}
+function initCRM(){
+  if(!DBH){try{var L=JSON.parse(localStorage.getItem('rioes_crm')||'{}');Object.keys(L).forEach(function(k){CRM[k]=L[k]});if(!Object.keys(CRM).length)seedCRM()}catch(e){}}
+  else{firebase.firestore().collection('crm').onSnapshot(function(snap){Object.keys(CRM).forEach(function(k){delete CRM[k]});snap.docs.forEach(function(d){CRM[d.id]=Object.assign({id:d.id},d.data())});if(!Object.keys(CRM).length)seedCRM();if(V==='crm')render()},function(){})}
+}
+function seedCRM(){
+  var seed=[
+    {id:'ACC-001',name:'Serene Court Hotel Ltd',sector:'Hospitality',location:'Kololo',contactName:'Grace Namutebi',role:'Procurement Manager',phone:'+256 700 000000 / grace@example.com',channel:'WhatsApp',decisionMaker:'General Manager',procSteps:'Quote > GM approval > LPO',currentArrangement:'In-house laundry with 2 ageing machines',need:"We need linen back on time every day",volumeItems:'Bedsheets, towels, uniforms (~400 pcs)',volumeFreq:'Daily pick-up',scope:'1 site, same-day turnaround on Fridays',qualScore:'9',stage:'Lost',nextAction:'Send revised price list to GM',proposalAmt:'4800000',monthlyRevenue:'4800000',grossMargin:'35',outcome:'Lost',lossReason:'Price'},
+    {id:'ACC-002',name:'Luigi Giussani High School',sector:'Education',location:'Banda',phone:'0783464627',channel:'Phone call',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-003',name:'Bethany High School',sector:'Education',location:'Ndagire Rd, Kampala',phone:'0772472068',channel:'Phone call',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-004',name:'Pearls of Good Hope',sector:'Education',location:'Mengo',contactName:'Micheal',role:'Warden',phone:'070 1394 395',channel:'Phone call',currentArrangement:'manual hand washing',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-005',name:'Good Elite Boys Hostel',sector:'Education',location:'Mengo',phone:'0761 708 550 / 0756 567 078',channel:'Phone call',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-006',name:'Merciline Hospital',sector:'Healthcare',location:'Kamuli',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-007',name:'Essence Spa Lounge',sector:'Spas',location:'Ntinda shopping Center Ground Floor Unit G02',phone:'0782069275',channel:'Phone call',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-008',name:'The Essentials',sector:'Spas',location:'Kaduyu Rd, Kampala',phone:'0704977687',channel:'Phone call',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-009',name:'Spa Palacho',sector:'Spas',location:'Kaduyu Rd, Kampala',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-010',name:'The Makeover Place',sector:'Salons',location:'Villa View Mall, E African Rd',phone:'0786350615',channel:'Phone call',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-011',name:'Motel Belle Vie',sector:'Hospitality',location:'Ndagire Rd, Kampala',phone:'0200912275',channel:'Phone call',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-012',name:'KBM Hotel',sector:'Hospitality',location:'Kamuli Rd, Kampala',phone:'0773494444',channel:'Phone call',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-013',name:'Sky Hotel International',sector:'Hospitality',location:'Plot 1423 Ntinda off Naalya Road',phone:'0751224000',channel:'Phone call',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-014',name:'Flamarc Hotel',sector:'Hospitality',location:'MOGAS, Kamuli Rd, Kampala',phone:'0782645557',channel:'Phone call',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-015',name:'Lock & Key Restaurant',sector:'Restaurants & catering',contactName:'Gerald',phone:'0752554223',channel:'In-person visit',stage:'Target',nextAction:'Find out the Decision maker',actionOwner:'Joel'},
+    {id:'ACC-016',name:'Bella Nova Spa',sector:'Spas',location:'Nalya, Kamuli Road',phone:'0759740938',channel:'Phone call',stage:'Target'},
+    {id:'ACC-017',name:'Wanderwave Restaurant & Guest house',sector:'Restaurants & catering',location:'Plot 1141 Namugongo Road',channel:'In-person visit',stage:'Target'},
+    {id:'ACC-018',name:'Sports View Hotel',sector:'Hospitality',location:'Kireka Trading Center, Jinja Road',phone:'0414286013',channel:'Phone call',stage:'Target'},
+    {id:'ACC-019',name:'Rockwood Hotel',sector:'Hospitality',location:'Mirembe Complex, Kampala',phone:'0740825749',channel:'Phone call',stage:'Target'},
+    {id:'ACC-020',name:'Eastern Route Hotel',sector:'Hospitality',location:'Jinja Road, Kampala',phone:'0703534208',channel:'Phone call',stage:'Target'},
+    {id:'ACC-021',name:'Keisha Motel',sector:'Hospitality',location:'Namugongo Road, Kampala',phone:'0772666472',channel:'Phone call',stage:'Target'},
+    {id:'ACC-022',name:'Lovisa Country Hotel',sector:'Hospitality',location:'Namugongo Road, Kampala',phone:'0773717737',channel:'Phone call',stage:'Target'},
+    {id:'ACC-023',name:'Kadz Hotel',sector:'Hospitality',location:'1277 Namugongo Road',channel:'In-person visit',stage:'Target'},
+    {id:'ACC-024',name:'Westside Motel',sector:'Hospitality',location:'Namugongo Road, Kampala',phone:'0701581515',channel:'Phone call',stage:'Target'},
+    {id:'ACC-025',name:'Plum Cafe and restaurant',sector:'Restaurants & catering',location:'Naalya-Namugongo Rd',phone:'0780735094',channel:'Phone call',stage:'Target'},
+    {id:'ACC-026',name:'Bamboo Restaurant Kamuli Annex',sector:'Restaurants & catering',location:'Kamuli',phone:'0782183001',channel:'Phone call',stage:'Target'},
+    {id:'ACC-027',name:'Golden Parrot Ug',sector:'Restaurants & catering',location:'Kamuli',phone:'0756710653',channel:'Phone call',stage:'Target'},
+    {id:'ACC-028',name:'Kabz Restaurant & Grill',sector:'Restaurants & catering',location:'Kyaliwajjala - Naalya Rd',phone:'0781012325',channel:'Phone call',stage:'Target'},
+    {id:'ACC-029',name:'Relish Restaurant Hall and Gardens',sector:'Restaurants & catering',location:'Plot 2201 Naalya-Namugongo Road',phone:'0702444148',channel:'Phone call',stage:'Target'},
+    {id:'ACC-030',name:'Cuts & Grills Restaurant',sector:'Restaurants & catering',location:'Namugongo Road',phone:'0751975127',channel:'Phone call',stage:'Target'},
+    {id:'ACC-031',name:'The Food Studio',sector:'Restaurants & catering',location:'Sekitoleko Road, Mbalwa',phone:'0754221049',channel:'Phone call',stage:'Target'},
+    {id:'ACC-032',name:'Kajjoz Foods - Outside Catering',sector:'Restaurants & catering',location:'Kabaka\'s road, Kireka',phone:'0758916205',channel:'Phone call',stage:'Target'},
+    {id:'ACC-033',name:'Nsereko Catering Group',sector:'Restaurants & catering',location:'Naalya-Namugongo Rd',phone:'0785043405',channel:'Phone call',stage:'Target'},
+    {id:'ACC-034',name:'Devine Medical Centre',sector:'Healthcare',location:'Kamuli Road, Semanzi Mall',phone:'0775582853',channel:'Phone call',stage:'Target'},
+    {id:'ACC-035',name:'Case Clinic Naalya',sector:'Healthcare',location:'Plot 826 Naalya Rd',phone:'0783783333',channel:'Phone call',stage:'Target'},
+    {id:'ACC-036',name:'Bubblles Family Clinic',sector:'Healthcare',location:'Ntinda Kigowa Rd',phone:'0777680537',channel:'Phone call',stage:'Target'},
+    {id:'ACC-037',name:"Children's Clinic Naalya",sector:'Healthcare',location:'Namugongo Road',phone:'0771333620',channel:'Phone call',stage:'Target'},
+    {id:'ACC-038',name:'The Rehab Clinic',sector:'Healthcare',location:'Naalya Plot 285 Spine Rd',phone:'0752045865',channel:'Phone call',stage:'Target'},
+    {id:'ACC-039',name:'TMR International Hospital',sector:'Healthcare',location:'Kira Ln, Kampala',phone:'0200777850',channel:'Phone call',stage:'Target'},
+    {id:'ACC-040',name:'Limear',sector:'Healthcare',location:'Naalya',phone:'0800330330',channel:'Phone call',stage:'Target'},
+    {id:'ACC-041',name:'Florida Guest House',sector:'Hospitality',location:'Kireka rd',phone:'0772499039',channel:'Phone call',stage:'Target'},
+    {id:'ACC-042',name:'Lyon Guest House',sector:'Hospitality',location:'Kireka rd',phone:'0773846925',channel:'Phone call',stage:'Target'},
+    {id:'ACC-043',name:'Malyeks Home',sector:'Hospitality',location:'1 Kaduyu Ln, Kampala',phone:'0706580997',channel:'Phone call',stage:'Target'},
+    {id:'ACC-044',name:'Victoria Panorama Inn',sector:'Hospitality',location:'5 Kaduyu Road Masese',phone:'0434121114',channel:'Phone call',stage:'Target'},
+    {id:'ACC-045',name:'Birunga Guest House',sector:'Hospitality',location:'Kiwatule kaduyu rd',phone:'0758398120',channel:'Phone call',stage:'Target'},
+    {id:'ACC-046',name:'Arch Apartments and Hotel',sector:'Hospitality',location:'Kaduyu cl',phone:'0392175496',channel:'Phone call',stage:'Target'},
+    {id:'ACC-047',name:'Hotel Eliana',sector:'Hospitality',location:'Kiwatule kaduyu rd',phone:'0200917998',channel:'Phone call',stage:'Target'},
+    {id:'ACC-048',name:'Sals Hotel',sector:'Hospitality',location:'Kiwatule Road, Off Kigobe Rd',phone:'0758134822',channel:'Phone call',stage:'Target'},
+    {id:'ACC-049',name:'Life Care Wellness Spa',sector:'Spas',location:'Valley rd, Ntinda',phone:'0777888426',channel:'Phone call',stage:'Target'},
+    {id:'ACC-050',name:'Shalom Medical Centre',sector:'Healthcare',location:'Near Kigo Inn, Kamuli Rd',phone:'0759419081',channel:'Phone call',stage:'Target'},
+    {id:'ACC-051',name:'Nerves and Bones',sector:'Healthcare',location:'Kigobe, Kyambogo Rd',phone:'0755927058',channel:'Phone call',stage:'Target'},
+    { id:'ACC-052',name:"Izzy's Serenity Wellness Spa",sector:'Spas',location:'Kigobe rd',phone:'0777982666',channel:'Phone call',stage:'Target'},
+    {id:'ACC-053',name:'Miami Wellness Spa',sector:'Spas',location:'Naalya-Namugongo Rd',phone:'0708968079',channel:'Phone call',stage:'Target'},
+    {id:'ACC-054',name:'Spa Divo',sector:'Spas',location:'Canon Rd, Kampala',phone:'0781682826',channel:'Phone call',stage:'Target'},
+    {id:'ACC-055',name:'Aurea Spa & Massage',sector:'Spas',location:'Naalya Rd, Kampala',phone:'0754655563',channel:'Phone call',stage:'Target'},
+    {id:'ACC-056',name:'SpaMania Wellness Centre',sector:'Spas',location:'Ntinda - Kisaasi Rd',phone:'0759969627',channel:'Phone call',stage:'Target'},
+    {id:'ACC-057',name:'88 Wellness Spa',sector:'Spas',location:'Naalya',phone:'0754477461',channel:'Phone call',stage:'Target'}
+  ];
+  seed.forEach(function(a){
+    var full=Object.assign(crmEmpty(),{createdAt:Date.now(),createdBy:window.ME||''},a);
+    CRM[a.id]=full;
+    if(DBH)DBH.doc('crm/'+a.id).set(full).catch(function(){});
+  });
+  try{localStorage.setItem('rioes_crm',JSON.stringify(CRM))}catch(e){}
+}
+
+function stCol7(st){return{Target:'var(--mut)',Contacted:'var(--sky)',Discovery:'var(--sky2)',Qualified:'var(--ok)',Meeting:'var(--ok)',Proposal:'#f59e0b',Pilot:'#8b5cf6',Won:'var(--ok)',Lost:'#e5484d',Nurture:'var(--mut)'}[st]||'var(--ink)'}
+
+function crmCard(a){
+  var gp=a.monthlyRevenue&&a.grossMargin?Math.round(+a.monthlyRevenue*(+a.grossMargin/100)):0;
+  return'<div class="card" onclick="crmDet=\''+a.id+'\';crmNew=false;render()" style="cursor:pointer">'+
+    '<div class="row"><div><b>'+esc(a.name)+'</b> <span class="mut" style="font-size:11px">'+esc(a.id)+'</span></div>'+
+    '<span class="tag" style="color:'+stCol7(a.stage)+'">'+esc(a.stage)+'</span></div>'+
+    '<div class="mut">'+esc(a.sector)+(a.location?' • '+esc(a.location):'')+'</div>'+
+    (a.contactName?'<div class="mut">'+esc(a.contactName)+(a.role?' ('+esc(a.role)+')':'')+'</div>':'')+
+    (a.monthlyRevenue?'<div class="mut">Expected: '+u(+a.monthlyRevenue)+'/mo'+(gp?' • GP: '+u(gp):'')+'</div>':'')+
+    (a.nextAction?'<div class="mut">📌 '+esc(a.nextAction)+(a.nextActionDate?' by '+esc(a.nextActionDate):'')+(a.actionOwner?' ('+esc(a.actionOwner)+')':'')+'</div>':'')+
+    '</div>';
+}
+
+function vCRM(){
+  if(crmNew)return vCRMForm(null);
+  if(crmDet)return vCRMDetail(crmDet);
+  var all=Object.values(CRM).sort(function(a,b){return(a.id||'').localeCompare(b.id||'')});
+  var stCounts={};CRM_STAGES.forEach(function(s){stCounts[s]=all.filter(function(a){return a.stage===s}).length});
+  var active=all.filter(function(a){return['Contacted','Discovery','Qualified','Meeting','Proposal','Pilot'].includes(a.stage)});
+  var won=all.filter(function(a){return a.stage==='Won'});
+  var totalRev=active.reduce(function(a,x){return a+(+x.monthlyRevenue||0)},0);
+  var wonRev=won.reduce(function(a,x){return a+(+x.monthlyRevenue||0)},0);
+  var filt=crmFilt==='All'?all:all.filter(function(a){return a.stage===crmFilt||a.sector===crmFilt});
+  if(crmSv)filt=filt.filter(function(a){return(a.name+' '+a.sector+' '+(a.location||'')+' '+(a.id||'')).toLowerCase().includes(crmSv.toLowerCase())});
+  $('#view').innerHTML='<h2>Commercial pipeline</h2>'+
+    '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin-bottom:10px">'+
+    '<div class="stat">Prospects<b>'+all.length+'</b></div>'+
+    '<div class="stat">Active<b>'+active.length+'</b></div>'+
+    '<div class="stat">Won<b style="color:var(--ok)">'+won.length+'</b></div>'+
+    '<div class="stat">Pipeline rev.<b>'+u(totalRev)+'<span class="mut" style="font-size:11px">/mo</span></b></div>'+
+    '</div>'+
+    (isO()?'<div class="row2" style="margin-bottom:10px"><button class="p" onclick="crmNew=true;cef=crmEmpty();render()">+ Add prospect</button></div>':'')+
+    '<div class="chips">'+['All',...CRM_STAGES,...CRM_SECTORS].map(function(x){return'<button class="chip '+(crmFilt===x?'on':'')+'" onclick="crmFilt=\''+x+'\';render()">'+x+(stCounts[x]?' ('+stCounts[x]+')':'')+'</button>'}).join('')+'</div>'+
+    '<input placeholder="Search name, sector, location or ID" value="'+esc(crmSv)+'" oninput="crmSv=this.value;render()" style="margin:8px 0">'+
+    '<div class="cols">'+filt.map(crmCard).join('')+'</div>'+(filt.length?'':'<div class="card mut">No prospects match.</div>');
+}
+
+function vCRMForm(id){
+  var a=id?CRM[id]:cef;
+  var fi=function(l,k,t,ph){return'<label>'+l+'</label><input type="'+(t||'text')+'" placeholder="'+(ph||'')+'" value="'+esc(a[k]||'')+'" oninput="cef.'+k+'=this.value">';};
+  var sel=function(l,k,opts){return'<label>'+l+'</label><select onchange="cef.'+k+'=this.value">'+opts.map(function(o){return'<option'+(a[k]===o?' selected':'')+'>'+esc(o)+'</option>'}).join('')+'</select>';};
+  $('#view').innerHTML='<button class="g" onclick="crmDet=null;crmNew=false;render()">← Pipeline</button>'+
+    '<h2>'+(id?'Edit: '+esc(a.name):'New prospect')+'</h2>'+
+    '<div class="card"><b>Account</b>'+
+    fi('Business name','name','text','e.g. Grand Hotel Kampala')+
+    sel('Sector','sector',CRM_SECTORS)+
+    fi('Location / area','location','text','e.g. Kololo, Kampala')+
+    sel('Pipeline stage','stage',CRM_STAGES)+
+    fi('Account notes','notes','text','background, context')+
+    '</div>'+
+    '<div class="card"><b>Contact</b>'+
+    fi('Contact name','contactName')+
+    fi('Role / title','role')+
+    fi('Phone / email','phone')+
+    sel('Preferred channel','channel',CRM_CHANNELS)+
+    fi('Decision-maker','decisionMaker')+
+    fi('Procurement steps','procSteps')+
+    fi('Contract review date','contractReview','date')+
+    '</div>'+
+    '<div class="card"><b>Situation</b>'+
+    fi('Current arrangement','currentArrangement','text','e.g. in-house laundry, incumbent vendor')+
+    fi('Client need (their words)','need')+
+    fi('Pain / problem','pain')+
+    fi('Volume (items & frequency)','volumeItems')+
+    fi('Scope','scope','text','sites, special requirements')+
+    fi('Qualification score (0-12)','qualScore','number')+
+    '</div>'+
+    '<div class="card"><b>Last contact</b>'+
+    fi('Last contact date','lastContactDate','date')+
+    sel('Channel used','lastContactChannel',CRM_CHANNELS)+
+    fi('Person reached','lastContactPerson')+
+    fi('Summary of contact','lastContactSummary')+
+    '</div>'+
+    '<div class="card"><b>Next action</b>'+
+    fi('Next action (specific)','nextAction','text','what exactly, with whom')+
+    fi('Action owner','actionOwner','text','e.g. Joel')+
+    fi('Due date','nextActionDate','date')+
+    '</div>'+
+    '<div class="card"><b>Proposal & value</b>'+
+    fi('Proposal date sent','proposalDate','date')+
+    fi('Proposal amount (UGX)','proposalAmt','number')+
+    fi('Expected monthly revenue (UGX)','monthlyRevenue','number')+
+    fi('Estimated gross margin %','grossMargin','number')+
+    sel('Outcome','outcome',CRM_OUTCOMES)+
+    sel('Loss / other reason','lossReason',CRM_LOSS)+
+    '</div>'+
+    '<div class="row2"><button class="p" onclick="saveCRM(\''+(id||'')+'\')">'+(id?'Save changes':'Create prospect')+'</button>'+
+    (id&&isO()?'<button class="g" onclick="confirmDelCRM(\''+id+'\')">Delete</button>':'')+
+    '</div>';
+  cef=a;
+}
+
+function saveCRM(id){
+  if(!cef.name.trim())return toast('Enter the business name');
+  var a=Object.assign(id?Object.assign({},CRM[id]):crmEmpty(),cef,{id:id||crmId(),qualBand:crmBand(cef.qualScore),updatedAt:Date.now(),updatedBy:window.ME||''});
+  if(!id)a.createdAt=Date.now();
+  putCRM(a);toast(id?'Prospect updated':'Prospect added');crmDet=a.id;crmNew=false;render();
+}
+function confirmDelCRM(id){if(!isO())return;var a=CRM[id];if(!confirm('Delete '+a.name+'? This cannot be undone.'))return;delCRM(id);crmDet=null;render();toast('Prospect deleted')}
+
+function vCRMDetail(id){
+  var a=CRM[id];if(!a){crmDet=null;return vCRM()}
+  var gp=a.monthlyRevenue&&a.grossMargin?Math.round(+a.monthlyRevenue*(+a.grossMargin/100)):0;
+  var daysSince=a.lastContactDate?Math.floor((Date.now()-new Date(a.lastContactDate+'T00:00:00').getTime())/DAY6):'';
+  var overdueAction=a.nextActionDate&&a.nextActionDate<td();
+  $('#view').innerHTML='<button class="g" onclick="crmDet=null;render()">← Pipeline</button>'+
+    '<div class="row" style="margin:10px 0 4px"><div><h2 style="margin:0">'+esc(a.name)+'</h2><div class="mut">'+esc(a.id)+' • '+esc(a.sector)+'</div></div>'+
+    '<span class="tag" style="color:'+stCol7(a.stage)+'">'+esc(a.stage)+'</span></div>'+
+    '<div class="card"><div class="lines">'+
+    (a.location?'<div><span>Location</span><span>'+esc(a.location)+'</span></div>':'')+
+    (a.contactName?'<div><span>Contact</span><span>'+esc(a.contactName)+(a.role?' • '+esc(a.role):'')+'</span></div>':'')+
+    (a.phone?'<div><span>Phone / email</span><span>'+esc(a.phone)+'</span></div>':'')+
+    (a.channel?'<div><span>Preferred channel</span><span>'+esc(a.channel)+'</span></div>':'')+
+    (a.decisionMaker?'<div><span>Decision-maker</span><span>'+esc(a.decisionMaker)+'</span></div>':'')+
+    (a.procSteps?'<div><span>Procurement steps</span><span>'+esc(a.procSteps)+'</span></div>':'')+
+    (a.contractReview?'<div><span>Contract review</span><span>'+esc(a.contractReview)+'</span></div>':'')+
+    '</div></div>'+
+    '<div class="card"><b>Situation</b><div class="lines">'+
+    (a.currentArrangement?'<div><span>Current arrangement</span><span>'+esc(a.currentArrangement)+'</span></div>':'')+
+    (a.need?'<div><span>Need</span><span>'+esc(a.need)+'</span></div>':'')+
+    (a.pain?'<div><span>Pain</span><span>'+esc(a.pain)+'</span></div>':'')+
+    (a.volumeItems?'<div><span>Volume</span><span>'+esc(a.volumeItems)+'</span></div>':'')+
+    (a.scope?'<div><span>Scope</span><span>'+esc(a.scope)+'</span></div>':'')+
+    (a.qualScore?'<div><span>Qualification</span><b>'+esc(a.qualScore)+'/12 ('+esc(a.qualBand||crmBand(a.qualScore))+')</b></div>':'')+
+    '</div></div>'+
+    '<div class="card"><b>Last contact</b><div class="lines">'+
+    (a.lastContactDate?'<div><span>Date</span><span>'+esc(a.lastContactDate)+(daysSince!==''?' ('+daysSince+' days ago)':'')+'</span></div>':'')+
+    (a.lastContactChannel?'<div><span>Via</span><span>'+esc(a.lastContactChannel)+'</span></div>':'')+
+    (a.lastContactPerson?'<div><span>Person</span><span>'+esc(a.lastContactPerson)+'</span></div>':'')+
+    (a.lastContactSummary?'<div><span>Summary</span><span>'+esc(a.lastContactSummary)+'</span></div>':'')+
+    '</div></div>'+
+    '<div class="card '+(overdueAction?'tk':'')+'" style="'+(overdueAction?'border-color:#e5484d':'')+'"><b>Next action</b><div class="lines">'+
+    (a.nextAction?'<div><span>Action</span><b>'+esc(a.nextAction)+'</b></div>':'')+
+    (a.actionOwner?'<div><span>Owner</span><span>'+esc(a.actionOwner)+'</span></div>':'')+
+    (a.nextActionDate?'<div><span>Due</span><b style="color:'+(overdueAction?'#e5484d':'var(--ink)')+'">'+esc(a.nextActionDate)+(overdueAction?' ⚠️ OVERDUE':'')+'</b></div>':'')+
+    '</div></div>'+
+    (a.monthlyRevenue||a.proposalAmt?'<div class="card"><b>Value</b><div class="lines">'+
+    (a.proposalDate?'<div><span>Proposal sent</span><span>'+esc(a.proposalDate)+'</span></div>':'')+
+    (a.proposalAmt?'<div><span>Proposal</span><span>'+u(+a.proposalAmt)+'</span></div>':'')+
+    (a.monthlyRevenue?'<div><span>Monthly revenue</span><b>'+u(+a.monthlyRevenue)+'</b></div>':'')+
+    (a.grossMargin?'<div><span>Est. gross margin</span><span>'+esc(a.grossMargin)+'%</span></div>':'')+
+    (gp?'<div><span>Est. monthly GP</span><b>'+u(gp)+'</b></div>':'')+
+    (a.outcome?'<div><span>Outcome</span><b style="color:'+(a.outcome==='Won'?'var(--ok)':'#e5484d')+'">'+esc(a.outcome)+'</b></div>':'')+
+    (a.lossReason?'<div><span>Reason</span><span>'+esc(a.lossReason)+'</span></div>':'')+
+    '</div></div>':'')+ 
+    (a.notes?'<div class="card"><b>Notes</b><div>'+esc(a.notes)+'</div></div>':'')+
+    (isO()?'<div class="row2"><button class="p" onclick="cef=Object.assign({},CRM[\''+id+'\']);vCRMForm(\''+id+'\')">Edit</button>'+
+    '<a class="g" href="'+wl(a.phone?a.phone.replace(/[^0-9]/g,'').replace(/^0/,'256'):'',a.name+' – follow-up from Rioes Laundry')+'" target="_blank" rel="noopener">WhatsApp</a></div>':'');
+}
+
+/* Hook render and tasks for CRM */
+var _R_crm=render;
+render=function(){if(V==='crm'){nav();return vCRM()}_R_crm()};
+var _tasks_crm=tasks;
+tasks=function(){
+  var T=_tasks_crm(),now=Date.now();
+  if(isO())Object.values(CRM).forEach(function(a){
+    if(a.nextActionDate&&a.nextActionDate<td())T.push(['🏢 Overdue CRM action',esc(a.name)+': '+esc(a.nextAction||'Follow up'),a.phone?wl(a.phone.replace(/[^0-9]/g,'').replace(/^0/,'256'),'Hello, following up from Rioes Laundry regarding '+a.name):'','',"crmDet='"+a.id+"';go('crm')"]);
+  });
+  return T;
+};
+
+/* Add CRM to NAV (admin only shown via worker filter) */
+NAV.splice(NAV.findIndex(function(n){return n[0]==='subs'})+1,0,['crm','🏢','CRM']);
+/* CRM rule in ROUTE */
+var _R_orig=ROUTE;
+ROUTE=function(v){if(v==='crm'){vCRM();return}_R_orig(v)};
+
+initCRM();
 </script>
 </body></html>
