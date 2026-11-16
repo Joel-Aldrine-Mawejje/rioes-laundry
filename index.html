@@ -73,7 +73,7 @@ function bkBanner(){} function tasks(){return[]} function vSubsPage(){} var dkOp
 const S=['Received','Processing','Ready','Collected'];
 let PER=1000,WA={ready:'Hello {name}, your laundry (order {tag}) is ready for pickup at Rioes Laundry. Balance due: {bal}. Thank you!',readyd:'Hello {name}, your laundry (order {tag}) is ready for delivery. Balance due: {bal}. We will contact you to confirm the delivery time.',upd:'Hello {name}, order {tag} is now {st}.',unpaid:'Hello {name}, a friendly reminder: you have an unpaid balance of {bal} on order {tag}. Kindly pay by Mobile Money or cash.',survey:'Hi {name}, thank you for choosing Rioes Laundry! You now have {pts} loyalty points. How was order {tag}? Reply 1-5 (5 = excellent) and tell us what we can improve.',bday:'Happy birthday {name}! Enjoy 10% off your next order at Rioes Laundry this week.',back:'Hi {name}, we miss you at Rioes Laundry! Bring your next load this week and get double points.',receipt:'Rioes Laundry receipt {tag}\nDate: {date}\n{items}\nTotal: {total}\nPaid: {paid}\nBalance: {bal}\nLoyalty points: {pts}\nThank you {name}!'};
 let SV=[['Wash & fold (per kg)',3000],['Shirt / blouse',8000],['Suit (2-piece)',25000],['Dress',12000],['Duvet / blanket',20000],['Ironing only (piece)',1000],['Curtains (per panel)',10000]];
-const NAV=[['dash','🏠','Home'],['work','✅','Tasks'],['new','➕','New'],['orders','📋','Orders'],['cust','👥','Clients'],['subs','📦','Subs'],['rep','📊','Reports'],['set','⚙️','Settings']];
+const NAV=[['dash','🏠','Home'],['work','✅','Tasks'],['new','➕','New'],['orders','📋','Orders'],['cust','👥','Clients'],['subs','📦','Subscriptions'],['rep','📊','Reports'],['set','⚙️','Settings']];
 let D={c:{},o:[],n:1001},DBH=null,last={},SY='Saved on this device only';
 try{const r=localStorage.getItem('rioes1');if(r)D=JSON.parse(r)}catch(e){}
 const ren=()=>{if(V!=='new')render()};
@@ -101,7 +101,7 @@ if(o.st=='Collected')return `Thank you ${n}! You now have ${D.c[o.ph].pts} loyal
 return `Hello ${n}, update on order #${o.id}: it is now at the ${o.st} stage.`}
 function cpm(id){const o=D.o.find(x=>x.id==id);try{navigator.clipboard.writeText(msg(o)).then(()=>toast('Message copied'),()=>toast('Copy blocked by browser'))}catch(e){toast('Copy blocked by browser')}}
 function adv(id){const o=D.o.find(x=>x.id==id),i=S.indexOf(o.st);if(i>=5)return;o.st=S[i+1];if(o.st=='Collected')o.paid=o.net;save();toast('Order #'+id+' → '+o.st);render()}
-function oc(o){const i=S.indexOf(o.st);return `<div class="card"><div class="row"><b>#${o.id} ${esc(nm(o.ph))}</b><span class="tag">${o.st}</span></div>
+function oc(o){const i=S.indexOf(o.st);return `<div class="card"><div class="row"><b>#${o.id} <span style="color:var(--sky2);cursor:pointer;text-decoration:underline" onclick="cliDet='${o.ph}';go('cust')">${esc(nm(o.ph))}</span></b><span class="tag">${o.st}</span></div>
 <div class="mut">${o.items.map(x=>x.q+'× '+esc(x.n)).join(', ')}</div><div class="mut">${u(o.net)} • balance ${u(o.net-o.paid)}${o.express?' • express':''}</div>
 <div class="row2">${i<5?`<button class="p" onclick="adv(${o.id})">${i==4?'Collect & mark paid':'Move to '+S[i+1]}</button>`:''}<a class="g" href="${wl(o.ph,msg(o))}" target="_blank" rel="noopener">WhatsApp</a><button class="g" onclick="cpm(${o.id})">Copy message</button></div></div>`}
 function nav(){const h=NAV.map(n=>`<button class="nb ${V==n[0]?'on':''}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}</button>`).join('');
@@ -164,7 +164,7 @@ if(D.cfg){SV=D.cfg.sv||SV;PER=D.cfg.per||PER;WA={...WA,...D.cfg.wa}}
 let cfgDirty=false,seg=0;
 const DAY=864e5,ld=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},td=()=>ld(Date.now()),PM=['Cash','Mobile money'],tag=o=>'RL'+o.id,bal=o=>o.net-o.paid;
 const fill=(t,v)=>t.replace(/\{(\w+)\}/g,(m,k)=>v[k]!==undefined?v[k]:m);
-function vars(o){const c=D.c[o.ph]||{};return{name:c.name||o.ph,tag:tag(o),date:ld(o.t),st:o.st,bal:u(bal(o)),total:u(o.net),paid:u(o.paid),pts:c.pts||0,items:o.items.map(x=>x.q+'× '+x.n).join(', ')}}
+function vars(o){const c=D.c[o.ph]||{};return{name:c.name||o.ph,tag:tag(o),date:ld(o.t),st:o.st,bal:u(bal(o)),total:u(o.net),paid:u(o.paid),pts:c.pts||0,staff:who()||'the team',items:o.items.map(x=>x.q+'× '+x.n).join(', ')}}
 function msg(o){return fill(o.st=='Ready'?WA.ready:o.st=='Collected'?WA.done:WA.upd,vars(o))}
 const lastOrd=p=>Math.max(0,...D.o.filter(o=>o.ph==p).map(o=>o.t));
 function save(){D.cfg={sv:SV,per:PER,wa:WA};try{localStorage.setItem('rioes1',JSON.stringify(D))}catch(e){}
@@ -228,7 +228,7 @@ function addS(){const n=$('#ns').value.trim(),p=+$('#np').value;if(!n||!p)return
 function vSet1(){const L={ready:'Ready for pickup',upd:'Status update',readyd:'Ready for delivery',unpaid:'Unpaid balance (every 3 days)',survey:'Thank you + feedback survey (after collection)',bday:'Birthday',back:'Win-back',receipt:'Receipt'};
 $('#view').innerHTML=`<h2>Settings</h2><div class="card"><b>Services &amp; prices</b>${SV.map((s,i)=>`<div class="row2"><input value="${esc(s[0])}" style="flex:2;min-width:140px" onchange="SV[${i}][0]=this.value;cs()"><input type="number" value="${s[1]}" style="flex:1;min-width:90px" onchange="SV[${i}][1]=+this.value||0;cs()"><button class="g" onclick="SV.splice(${i},1);cs();vSet()">✕</button></div>`).join('')}<div class="row2"><input id="ns" placeholder="New service name" style="flex:2;min-width:140px"><input id="np" type="number" placeholder="Price" style="flex:1;min-width:90px"><button class="p" onclick="addS()">Add</button></div></div>
 
-<div class="card"><b>WhatsApp messages</b><div class="mut">Placeholders: {name} {tag} {bal} {total} {paid} {pts} {st} {items} {date}</div>${Object.keys(L).map(k=>`<label>${L[k]}</label><textarea rows="3" onchange="WA['${k}']=this.value;cs()">${esc(WA[k])}</textarea>`).join('')}</div>`}
+<div class="card"><b>WhatsApp messages</b><div class="mut">Placeholders: {name} {tag} {bal} {total} {paid} {pts} {st} {items} {date} {staff}</div>${Object.keys(L).map(k=>`<label>${L[k]}</label><textarea rows="3" onchange="WA['${k}']=this.value;cs()">${esc(WA[k])}</textarea>`).join('')}</div>`}
 function vRep1(){vRep0();const m={};D.o.forEach(o=>(o.pays||[]).forEach(p=>m[p.m]=(m[p.m]||0)+p.a));$('#view').insertAdjacentHTML('beforeend',`<div class="card"><b>Payments by method</b><div class="lines">${PM.map(k=>`<div><span>${k}</span><span>${u(m[k]||0)}</span></div>`).join('')}</div><div class="row2"><button class="p" onclick="window.print()">Print / Save as PDF</button></div></div>`)}
 try{const th=localStorage.getItem('rtheme');if(th)document.documentElement.dataset.theme=th}catch(e){}
 document.body.insertAdjacentHTML('beforeend','<button id="tg" class="g" onclick="tgl()">🌓</button>');
@@ -1460,5 +1460,175 @@ var _R_orig=ROUTE;
 ROUTE=function(v){if(v==='crm'){vCRM();return}_R_orig(v)};
 
 initCRM();
+</script>
+<script>
+/* ===== PATCH 8 ===== */
+
+/* 1. Contacts picker icon on phone inputs */
+function addContactPicker(inputId,onFill){
+  var inp=document.getElementById(inputId);
+  if(!inp||inp.dataset.cpAdded)return;
+  inp.dataset.cpAdded='1';
+  var btn=document.createElement('button');
+  btn.type='button';btn.className='g';btn.style.cssText='padding:6px 10px;font-size:17px;flex-shrink:0';
+  btn.title='Search contacts';btn.textContent='📒';
+  btn.onclick=function(){
+    if('contacts' in navigator&&'ContactsManager' in window){
+      navigator.contacts.select(['name','tel'],{multiple:false}).then(function(cs){
+        if(!cs||!cs.length)return;
+        var c=cs[0],ph=(c.tel&&c.tel[0]||'').replace(/\D/g,'').replace(/^0/,'256');
+        var nm=(c.name&&c.name[0])||'';
+        onFill(ph,nm);
+      }).catch(function(){toast('Contacts access denied or unavailable')});
+    } else {
+      toast('Contact picker not supported on this browser. Use Chrome on Android.');
+    }
+  };
+  inp.parentNode.insertBefore(btn,inp.nextSibling);
+  inp.style.flex='1';
+  var wrap=inp.parentNode;
+  if(wrap.style.display!=='flex'){wrap.style.display='flex';wrap.style.gap='6px';wrap.style.alignItems='center'}
+}
+
+/* Hook vNew to add picker after render */
+var _vNew_cp=vNew;
+vNew=function(){
+  _vNew_cp();
+  setTimeout(function(){
+    addContactPicker('fp',function(ph,nm){
+      draft.ph=ph;draft.name=draft.name||nm;
+      var fp=document.getElementById('fp');if(fp)fp.value=ph;
+      var fn=document.getElementById('fn');if(fn&&nm)fn.value=nm;
+      pick(ph);
+    });
+  },50);
+};
+
+/* Hook vCust (client form) for new client picker */
+var _vCust_cp=vCust;
+vCust=function(){
+  _vCust_cp();
+  setTimeout(function(){
+    var ph=document.querySelector('#view input[type="tel"],#view input[placeholder*="phone"],#view input[placeholder*="Phone"],#view input[placeholder*="456"]');
+    if(ph&&!ph.dataset.cpAdded){
+      addContactPicker(ph.id||'snph',function(p,nm){
+        cf.ph=p;cf.name=cf.name||nm;
+        if(ph)ph.value=p;
+        var nf=document.getElementById('fn');if(nf&&nm)nf.value=nm;
+      });
+    }
+  },50);
+};
+
+/* 2. {staff} placeholder - fills with signed-in user's display name */
+/* {staff} is built into vars() directly */
+/* Add {staff} note to WhatsApp settings */
+var _vSet_cp=vSet;
+vSet=function(){
+  _vSet_cp();
+  var view=$('#view');if(!view)return;
+  var mut=view.querySelector('#view .mut');
+  var old=view.querySelector('[id="L"]');
+  // Find the WhatsApp messages card and add the staff note
+  var cards=[...view.querySelectorAll('.card')];
+  cards.forEach(function(c){
+    if(c.innerText.indexOf('WhatsApp messages')>=0&&!c.querySelector('.staff-note')){
+      var d=document.createElement('div');d.className='mut staff-note';d.style.marginBottom='6px';
+      d.textContent='Add {staff} to any message to automatically show the name of the person sending it.';
+      var ta=c.querySelector('label');if(ta)c.insertBefore(d,ta);
+    }
+  });
+};
+
+/* 3. Excess payment fix - show in client details + credit balance */
+/* The excess payment flow already adds to c.credit. We now also add an order-level note. */
+var _place_p8=place;
+place=function(){
+  var before=Object.values(D.c).reduce(function(a,c){return a+(c.credit||0)},0);
+  _place_p8();
+  var after=Object.values(D.c).reduce(function(a,c){return a+(c.credit||0)},0);
+  var diff=after-before;
+  if(diff>0){
+    var o=D.o[0];var c=D.c[o&&o.ph];
+    if(c)toast(u(diff)+' excess added to '+esc(c.name||'client')+'\'s account credit (now '+u(c.credit)+')');
+  }
+};
+
+/* 4. Client detail: show total balance + hyperlink client name in order card */
+var _vClientDetail_p8=vClientDetail;
+vClientDetail=function(p){
+  _vClientDetail_p8(p);
+  /* Order history client name hyperlink already exists via Edit client btn */
+};
+
+/* Better: patch oc() to add hyperlink to client name */
+var _oc0_p8=oc0;
+oc0=function(o){
+  var html=_oc0_p8(o);
+  var cname=esc(nm(o.ph));
+  /* Replace plain name text with clickable link */
+  html=html.replace('<b>RL'+o.id+' '+cname+'</b>',
+    '<b>RL'+o.id+' <span style="color:var(--sky2);cursor:pointer;text-decoration:underline" onclick="cliDet=\''+o.ph+'\';go(\'cust\')">'+cname+'</span></b>');
+  return html;
+};
+
+/* 5. Subs → Subscriptions in nav */
+/* subs already labelled Subscriptions */
+/* Re-render nav immediately */
+nav();
+
+/* 6. Daily expense nudge in tasks */
+var _tasks_p8=tasks;
+tasks=function(){
+  var T=_tasks_p8(),t=td();
+  /* Check if any expense was logged today */
+  var loggedToday=Object.values(EXS).some(function(e){return e.date===t});
+  if(!loggedToday){
+    T.unshift(['💸 Log today\'s expenses','No expenses logged yet for today. Tap to add.',null,"go('exp')",'']);
+  }
+  return T;
+};
+
+/* 7. Push notifications */
+var NOTIF_GRANTED=false;
+function reqNotif(){
+  if(!('Notification' in window))return toast('Notifications not supported on this browser');
+  if(Notification.permission==='granted'){NOTIF_GRANTED=true;toast('Notifications are already enabled');return}
+  Notification.requestPermission().then(function(p){
+    NOTIF_GRANTED=p==='granted';
+    toast(NOTIF_GRANTED?'Notifications enabled! You will now receive reminders.':'Notifications blocked. Enable them in your browser settings.');
+    if(NOTIF_GRANTED)schedNotif();
+  });
+}
+function pushNotif(title,body,tag,onclick){
+  if(!NOTIF_GRANTED||Notification.permission!=='granted')return;
+  try{
+    var n=new Notification(title,{body:body,tag:tag||'rioes',icon:'icon-192.png',badge:'icon-192.png',vibrate:[200,100,200]});
+    if(onclick)n.onclick=function(){window.focus();onclick();n.close()};
+  }catch(e){}
+}
+function schedNotif(){
+  if(!NOTIF_GRANTED)return;
+  /* Check tasks and push critical ones */
+  var T=tasks();
+  var crit=T.filter(function(t){return/Overdue|overdue|OVERDUE|unpaid|Unpaid|birthday|Birthday|expir/i.test(t[0]+' '+(t[1]||''))});
+  if(crit.length)pushNotif('Rioes – '+crit.length+' task'+(crit.length>1?'s':'')+' need attention',crit.slice(0,3).map(function(t){return t[0]+': '+(t[1]||'').slice(0,50)}).join('\n'),'rioes-tasks');
+  var t=td(),loggedOps=OPS&&OPS[t],loggedExp=Object.values(EXS).some(function(e){return e.date===t}),hour=new Date().getHours();
+  if(!loggedOps&&hour>=7&&hour<10)pushNotif('Rioes – Log today\'s operations','Wash log and electricity reading not submitted yet.','rioes-ops',function(){go('ops')});
+  if(!loggedExp&&hour>=16&&hour<20)pushNotif('Rioes – Log today\'s expenses','No expenses recorded for today.','rioes-exp',function(){go('exp')});
+}
+/* Ask for notification permission and schedule checks */
+if('Notification' in window){
+  if(Notification.permission==='granted'){NOTIF_GRANTED=true;setInterval(schedNotif,60*60*1000);setTimeout(schedNotif,5000)}
+}
+/* Add notification enable button to settings */
+var _vSet_notif=vSet;
+vSet=function(){
+  _vSet_notif();
+  var view=$('#view');if(!view)return;
+  view.insertAdjacentHTML('beforeend','<div class="card"><b>🔔 Push notifications</b><div class="mut">Enable browser notifications to receive reminders about tasks, overdue orders and daily log nudges. Grant permission once and they will arrive automatically.</div>'+
+    (('Notification' in window)?'<div class=\"row2\"><button class=\"p\" onclick=\"reqNotif()\">'+(Notification.permission==='granted'?'Notifications enabled ✓':'Enable notifications')+'</button></div>':'<div class=\"mut\">Not supported on this browser or device.</div>')+
+    '</div>');
+};
 </script>
 </body></html>
