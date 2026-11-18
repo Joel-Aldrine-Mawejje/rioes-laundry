@@ -162,7 +162,7 @@ $('#view').innerHTML=`<h2>Reports</h2><div class="grid"><div class="stat">Cash c
 <script>
 if(D.cfg){SV=D.cfg.sv||SV;PER=D.cfg.per||PER;WA={...WA,...D.cfg.wa}}
 let cfgDirty=false,seg=0;
-const DAY=864e5,ld=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},td=()=>ld(Date.now()),PM=['Cash','Mobile money'],tag=o=>'RL'+o.id,bal=o=>o.net-o.paid;
+const DAY=864e5,ld=t=>{const d=new Date(t);return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})},td=()=>ld(Date.now()),PM=['Cash','Mobile money'],tag=o=>'RL'+o.id,bal=o=>o.net-o.paid;
 const fill=(t,v)=>t.replace(/\{(\w+)\}/g,(m,k)=>v[k]!==undefined?v[k]:m);
 function vars(o){const c=D.c[o.ph]||{};return{name:c.name||o.ph,tag:tag(o),date:ld(o.t),st:o.st,bal:u(bal(o)),total:u(o.net),paid:u(o.paid),pts:c.pts||0,staff:who()||'the team',items:o.items.map(x=>x.q+'× '+x.n).join(', ')}}
 function msg(o){return fill(o.st=='Ready'?WA.ready:o.st=='Collected'?WA.done:WA.upd,vars(o))}
@@ -220,11 +220,32 @@ if(l&&now-l>14*DAY&&now-(c.wn||0)>30*DAY)T.push(['👋 Win-back',c.name+', away 
 if(s&&((s.exp&&s.exp<=new Date(now+7*DAY).toISOString().slice(0,10))||s.left<=1)&&c.sx!=t)T.push(['📦 Subscription ending',c.name+': '+s.left+' visits left'+(s.exp?', expires '+s.exp:''),wl(p,'Hello '+c.name+', your '+(s.plan||'subscription')+' has '+s.left+' visits left'+(s.exp?' and expires on '+s.exp:'')+'. Renew to keep your savings!'),`nudC('${p}','sx')`])});return T}
 function nud(id,k){const o=D.o.find(x=>x.id==id);o[k]=k=='un'?Date.now():1;save();setTimeout(render,400)}
 function nudC(p,k){const c=D.c[p],t=td();c[k]=k=='bn'?t.slice(0,4):k=='sx'?t:Date.now();save();setTimeout(render,400)}
-const tk=T=>T.map(x=>`<div class="card tk" ${x[5]?`onclick="${x[5]}" style="cursor:pointer"`:''}><div class="row"><b>${x[0]}</b>${x[4]?`<button class="g" onclick="${x[4]}">Dismiss</button>`:''}${x[2]?`<a class="g" href="${x[2]}" target="_blank" rel="noopener" onclick="${x[3]}">Send</a>`:''}</div><div class="mut">${esc(x[1])}</div></div>`).join('')||'<div class="card mut">Nothing to chase. Go fold something.</div>';
-function vDash(){vDash0();bkBanner();$('#view').insertAdjacentHTML('beforeend','<h2>Team to-do</h2><div class="cols">'+tk(tasks())+'</div>')}
-function vWork(){const a=D.o.filter(o=>o.st!='Collected');$('#view').innerHTML=`<h2>Worker board</h2>${tk(tasks())}<h2 style="margin-top:16px">Active orders (${a.length})</h2>`+a.map(o=>{const i=S.indexOf(o.st);return `<div class="card row"><span><b>${tag(o)}</b> ${esc(nm(o.ph))}<br><span class="mut">${o.st} • in ${ld(o.t)}${o.exp?' • due '+o.exp:''}</span></span>${i<3?`<button class="p" onclick="adv(${o.id})">${i==2?'Collected':'→ '+S[i+1]}</button>`:''}</div>`}).join('')}
-const cs=()=>{cfgDirty=true;save();toast('Saved')};
-function addS(){const n=$('#ns').value.trim(),p=+$('#np').value;if(!n||!p)return toast('Enter a name and price');SV.push([n,p]);cs();vSet()}
+const tk=function(T){
+  if(!T||!T.length)return'<div class="card mut">Nothing to chase. Go fold something.</div>';
+  var groups={},order=[];
+  T.forEach(function(x){
+    var type=x[0];
+    var grpKey=type.split(':')[0].trim();
+    if(!groups[grpKey]){groups[grpKey]=[];order.push(grpKey)}
+    groups[grpKey].push(x);
+  });
+  return order.map(function(grpKey){
+    var items=groups[grpKey];
+    if(items.length===1){var x=items[0];return'<div class="card tk"'+(x[4]?` onclick="${x[4]}" style="cursor:pointer"`:'')+'><div class="row"><b>'+esc(x[0])+'</b>'+
+      (x[3]?`<button class="g" style="font-size:12px;padding:4px 8px" onclick="event.stopPropagation();${x[3]}">Dismiss</button>`:'')+ 
+      (x[2]?`<a class="g" href="${x[2]}" target="_blank" rel="noopener" style="font-size:12px;padding:4px 8px">Send</a>`:'')+
+      '</div><div class="mut">'+esc(x[1])+'</div></div>'}
+    var gid='grp'+grpKey.replace(/[^a-z0-9]/gi,'');
+    return'<div class="card tk"><div class="row"><b>'+esc(grpKey)+'</b><span class="tag">'+items.length+'</span></div>'+
+      '<div class="mut">'+items.slice(0,2).map(function(x){return esc((x[1]||'').slice(0,60))}).join(' · ')+(items.length>2?' +'+( items.length-2)+' more':'')+'</div>'+
+      '<div id="'+gid+'" style="display:none;margin-top:6px">'+items.map(function(x){return'<div class="card" style="margin:4px 0 0"><div class="row"><span class="mut">'+esc(x[1])+'</span>'+
+        (x[2]?`<a class="g" href="${x[2]}" target="_blank" rel="noopener" style="font-size:12px;padding:4px 8px"`+(x[3]?` onclick="${x[3]}"`:'')+'> Send</a>':'')+
+        '</div></div>'}).join('')+'</div>'+
+      '<div class="row2"><button class="g" onclick="(function(b){var e=document.getElementById(&quot;'+gid+'&quot;);e.style.display=e.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;b.textContent=e.style.display===&quot;none&quot;?&quot;Show ('+items.length+')&quot;:&quot;Hide&quot;})(this)">'+'Show ('+items.length+')</button>'+
+      (items[0][2]?`<a class="g" href="${items[0][2]}" target="_blank" rel="noopener">Send first</a>`:'')+
+      '</div></div>';
+  }).join('');
+};function addS(){const n=$('#ns').value.trim(),p=+$('#np').value;if(!n||!p)return toast('Enter a name and price');SV.push([n,p]);cs();vSet()}
 function vSet1(){const L={ready:'Ready for pickup',upd:'Status update',readyd:'Ready for delivery',unpaid:'Unpaid balance (every 3 days)',survey:'Thank you + feedback survey (after collection)',bday:'Birthday',back:'Win-back',receipt:'Receipt'};
 $('#view').innerHTML=`<h2>Settings</h2><div class="card"><b>Services &amp; prices</b>${SV.map((s,i)=>`<div class="row2"><input value="${esc(s[0])}" style="flex:2;min-width:140px" onchange="SV[${i}][0]=this.value;cs()"><input type="number" value="${s[1]}" style="flex:1;min-width:90px" onchange="SV[${i}][1]=+this.value||0;cs()"><button class="g" onclick="SV.splice(${i},1);cs();vSet()">✕</button></div>`).join('')}<div class="row2"><input id="ns" placeholder="New service name" style="flex:2;min-width:140px"><input id="np" type="number" placeholder="Price" style="flex:1;min-width:90px"><button class="p" onclick="addS()">Add</button></div></div>
 
@@ -1629,6 +1650,277 @@ vSet=function(){
   view.insertAdjacentHTML('beforeend','<div class="card"><b>🔔 Push notifications</b><div class="mut">Enable browser notifications to receive reminders about tasks, overdue orders and daily log nudges. Grant permission once and they will arrive automatically.</div>'+
     (('Notification' in window)?'<div class=\"row2\"><button class=\"p\" onclick=\"reqNotif()\">'+(Notification.permission==='granted'?'Notifications enabled ✓':'Enable notifications')+'</button></div>':'<div class=\"mut\">Not supported on this browser or device.</div>')+
     '</div>');
+};
+</script>
+<script>
+/* ===== PATCH 9 ===== */
+
+/* Date format: ld updated at source to include day of week */
+
+/* 2. Fix: Subscriptions & CRM save to Firebase directly (not via DBH) */
+var fbstore=function(){return typeof firebase!=='undefined'&&firebase.apps&&firebase.apps.length?firebase.firestore():null};
+/* Override putSub */
+var _putSubOrig=putSub;
+putSub=function(sub){
+  SUBS[sub.id]=sub;
+  var fs=fbstore();
+  if(fs)fs.doc('subs/'+sub.id).set(sub).catch(function(e){console.log('subs save err',e)});
+  else try{var L=JSON.parse(localStorage.getItem('rioes_subs')||'{}');L[sub.id]=sub;localStorage.setItem('rioes_subs',JSON.stringify(L))}catch(e){}
+};
+/* Override putCRM */
+var _putCRMOrig=putCRM;
+putCRM=function(a){
+  CRM[a.id]=a;
+  var fs=fbstore();
+  if(fs)fs.doc('crm/'+a.id).set(a).catch(function(e){console.log('crm save err',e)});
+  else try{var L=JSON.parse(localStorage.getItem('rioes_crm')||'{}');L[a.id]=a;localStorage.setItem('rioes_crm',JSON.stringify(L))}catch(e){}
+};
+var _delCRMOrig=delCRM;
+delCRM=function(id){
+  delete CRM[id];
+  var fs=fbstore();
+  if(fs)fs.doc('crm/'+id).delete().catch(function(){});
+};
+/* Fix initSubs to listen via firebase.auth().onAuthStateChanged */
+function initSubsCloud(){
+  firebase.auth().onAuthStateChanged(function(user){
+    if(!user)return;
+    firebase.firestore().collection('subs').onSnapshot(function(snap){
+      Object.keys(SUBS).forEach(function(k){delete SUBS[k]});
+      snap.docs.forEach(function(d){SUBS[d.id]=Object.assign({id:d.id},d.data())});
+      if(V==='subs')render();
+    },function(){});
+  });
+}
+function initCRMCloud(){
+  firebase.auth().onAuthStateChanged(function(user){
+    if(!user)return;
+    firebase.firestore().collection('crm').onSnapshot(function(snap){
+      var prev=Object.keys(CRM).length;
+      Object.keys(CRM).forEach(function(k){delete CRM[k]});
+      snap.docs.forEach(function(d){CRM[d.id]=Object.assign({id:d.id},d.data())});
+      if(!Object.keys(CRM).length&&!prev)seedCRM();
+      if(V==='crm')render();
+    },function(){});
+  });
+}
+if(fbstore()){initSubsCloud();initCRMCloud();}
+
+/* 3. CRM search: debounced, doesn't re-render whole page on every keystroke */
+var crmSearchTimer=null;
+function crmSearchInput(val){
+  crmSv=val;
+  clearTimeout(crmSearchTimer);
+  crmSearchTimer=setTimeout(function(){
+    var el=document.getElementById('crmResults');
+    if(!el){render();return;}
+    var all=Object.values(CRM).sort(function(a,b){return(a.id||'').localeCompare(b.id||'')});
+    var filt=crmFilt==='All'?all:all.filter(function(a){return a.stage===crmFilt||a.sector===crmFilt});
+    if(crmSv)filt=filt.filter(function(a){return(a.name+' '+a.sector+' '+(a.location||'')+' '+(a.id||'')).toLowerCase().indexOf(crmSv.toLowerCase())>=0});
+    el.innerHTML=filt.map(crmCard).join('')||(filt.length?'':'<div class="card mut">No prospects match.</div>');
+  },250);
+}
+/* Patch vCRM to use crmSearchInput and add id=crmResults to list div */
+var _vCRMOrig=vCRM;
+vCRM=function(){
+  if(crmDet)return vCRMDetail(crmDet);
+  if(crmNew)return vCRMForm(null);
+  var all=Object.values(CRM).sort(function(a,b){return(a.id||'').localeCompare(b.id||'')});
+  var stCounts={};CRM_STAGES.forEach(function(s){stCounts[s]=all.filter(function(a){return a.stage===s}).length});
+  var active=all.filter(function(a){return['Contacted','Discovery','Qualified','Meeting','Proposal','Pilot'].indexOf(a.stage)>=0});
+  var won=all.filter(function(a){return a.stage==='Won'});
+  var totalRev=active.reduce(function(a,x){return a+(+x.monthlyRevenue||0)},0);
+  var filt=crmFilt==='All'?all:all.filter(function(a){return a.stage===crmFilt||a.sector===crmFilt});
+  if(crmSv)filt=filt.filter(function(a){return(a.name+' '+a.sector+' '+(a.location||'')+' '+(a.id||'')).toLowerCase().indexOf(crmSv.toLowerCase())>=0});
+  $('#view').innerHTML='<h2>Commercial pipeline</h2>'+
+    '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin-bottom:10px">'+
+    '<div class="stat">Prospects<b>'+all.length+'</b></div>'+
+    '<div class="stat">Active<b>'+active.length+'</b></div>'+
+    '<div class="stat">Won<b style="color:var(--ok)">'+won.length+'</b></div>'+
+    '<div class="stat">Pipeline<b>'+u(totalRev)+'<span class="mut" style="font-size:11px">/mo</span></b></div>'+
+    '</div>'+
+    (isO()?'<div class="row2" style="margin-bottom:10px"><button class="p" onclick="crmNew=true;cef=crmEmpty();crmDet=null;render()">+ Add prospect</button></div>':'')+
+    '<div class="chips">'+['All',...CRM_STAGES,...CRM_SECTORS].map(function(x){return'<button class="chip '+(crmFilt===x?'on':'')+'" onclick="crmFilt=\''+x+'\';crmSv=\'\';render()">'+x+(stCounts[x]?' ('+stCounts[x]+')':'')+'</button>'}).join('')+'</div>'+
+    '<input id="crmSrch" placeholder="Search name, sector, location or ID" value="'+esc(crmSv)+'" oninput="crmSearchInput(this.value)" style="margin:8px 0">'+
+    '<div id="crmResults">'+filt.map(crmCard).join('')+(filt.length?'':'<div class="card mut">No prospects match.</div>')+'</div>';
+  /* Keep cursor in search box after re-render */
+  var srch=document.getElementById('crmSrch');if(srch&&crmSv){srch.focus();srch.selectionStart=srch.selectionEnd=srch.value.length;}
+};
+
+/* 4. Phone number optional in new client form */
+var _saveCOrig=saveC;
+saveC=function(){
+  var n=cf.name.trim();
+  if(!n)return toast('Enter the client name');
+  var p=cf.ph?ph(cf.ph):'NOPH-'+Date.now();
+  if(cf.ph&&ph(cf.ph).length<10)return toast('Enter a valid phone number or leave it blank');
+  var e=D.c[p];
+  if(e&&!cf.edit)return toast('That number belongs to '+e.name);
+  var d={name:n,addr:cf.addr,room:cf.room||'',bday:cf.bday,gen:cf.gen,pts:Math.max(0,Math.floor(+cf.pts||0))};
+  if(cf.sp||cf.sl||cf.se)d.sub={plan:cf.sp,left:+cf.sl||0,exp:cf.se};
+  D.c[p]=Object.assign(e||{spent:0,visits:0},d);
+  if(!d.sub)delete D.c[p].sub;
+  save();toast(cf.edit?'Client updated':'Client added');cf=cfEmpty();vCust();
+};
+
+/* 5. Orders: add Paid / Unpaid filter chips */
+var _vOrders0Orig=vOrders0;
+vOrders0=function(){
+  _vOrders0Orig();
+  var chips=$('#view .chips');
+  if(chips&&!chips.querySelector('[data-pf]')){
+    chips.insertAdjacentHTML('beforeend',
+      '<button class="chip '+(f==='Unpaid'?'on':'')+'" data-pf="1" onclick="f=\'Unpaid\';ol()">Unpaid 💰</button>'+
+      '<button class="chip '+(f==='Paid'?'on':'')+'" data-pf="1" onclick="f=\'Paid\';ol()">Fully paid ✓</button>');
+  }
+};
+/* Patch ol() to handle Paid/Unpaid filters */
+var _olOrig=ol;
+ol=function(){
+  if(f!=='Unpaid'&&f!=='Paid')return _olOrig();
+  var t=q.toLowerCase().replace(/^rl(?=\d)/,'');
+  var r=D.o.filter(function(o){
+    if(t&&!(o.id+' '+nm(o.ph)+' '+o.ph).toLowerCase().includes(t))return false;
+    if(f==='Unpaid')return bal(o)>0;
+    if(f==='Paid')return bal(o)===0;
+    return true;
+  });
+  $('#ol').innerHTML=r.map(oc).join('')||'<div class="card mut">Nothing matches.</div>';
+};
+
+/* 6. Client detail: bulk payment for all unpaid orders */
+var _vClientDetailOrig=vClientDetail;
+vClientDetail=function(p){
+  _vClientDetailOrig(p);
+  /* Inject bulk payment section after order history heading */
+  var view=$('#view');if(!view)return;
+  var orders=D.o.filter(function(o){return o.ph===p&&bal(o)>0}).sort(function(a,b){return a.t-b.t});
+  var totalUnpaid=orders.reduce(function(a,o){return a+bal(o)},0);
+  if(!totalUnpaid)return;
+  var h2s=[...view.querySelectorAll('h2')];
+  var histH2=h2s.find(function(h){return h.textContent.includes('Order history')});
+  if(!histH2)return;
+  histH2.insertAdjacentHTML('beforebegin',
+    '<div class="card" style="border-color:var(--sky)"><b>💳 Clear outstanding balances</b>'+
+    '<div class="mut">Total unpaid across all orders: <b style="color:#e5484d">'+u(totalUnpaid)+'</b></div>'+
+    '<div class="lines" style="margin:8px 0">'+
+    orders.map(function(o){return'<div><span>RL'+o.id+' ('+ld(o.t).split(',')[0]+')</span><span>'+u(bal(o))+'</span></div>'}).join('')+
+    '</div>'+
+    '<label>Amount to pay now (UGX) – leave empty to pay all</label>'+
+    '<div class="row2"><input id="bulkAmt" type="number" inputmode="numeric" placeholder="'+totalUnpaid+'" style="flex:2;min-width:110px"><select id="bulkPm" style="flex:1"><option>Cash</option><option>Mobile money</option></select></div>'+
+    '<div class="row2"><button class="p" onclick="bulkPay(\''+p+'\')">Record payment</button></div></div>');
+};
+function bulkPay(p){
+  var inp=$('#bulkAmt'),pm=$('#bulkPm');
+  var orders=D.o.filter(function(o){return o.ph===p&&bal(o)>0}).sort(function(a,b){return a.t-b.t});
+  var totalUnpaid=orders.reduce(function(a,o){return a+bal(o)},0);
+  var amt=Math.min(totalUnpaid,Math.max(0,+(inp&&inp.value)||totalUnpaid));
+  var method=pm?pm.value:'Cash';
+  var remaining=amt;
+  orders.forEach(function(o){
+    if(remaining<=0)return;
+    var b=bal(o),pay=Math.min(b,remaining);
+    o.paid+=pay;
+    (o.pays=o.pays||[]).push({a:pay,m:method,t:Date.now()});
+    remaining-=pay;
+  });
+  save();
+  toast(u(amt)+' applied across '+orders.filter(function(o){return bal(o)<(D.o.find(function(x){return x.id===o.id})?bal(D.o.find(function(x){return x.id===o.id})):0)+0.01}).length+' orders');
+  cliDet=p;render();
+}
+
+/* 7. Fix subscription visit numbering: Visit 1 = first visit created */
+var _vSubDetailOrig=vSubDetail;
+vSubDetail=function(){
+  _vSubDetailOrig();
+  if(subTab!=='visits')return;
+  /* Re-render visit numbers correctly: 1=oldest, N=newest */
+  var view=$('#view');if(!view)return;
+  var sub=SUBS[subDet];if(!sub||!sub.visits)return;
+  var cards=[...view.querySelectorAll('.card b')].filter(function(b){return/^Visit \d+$/.test(b.textContent)});
+  var total=sub.visits.length;
+  /* visits are displayed reversed (newest first), so card[0]=newest=Visit total */
+  cards.forEach(function(b,i){b.textContent='Visit '+(total-i)});
+};
+
+/* 8. Pickup date quickbuttons: base from order date, not today */
+function pk(n){
+  var base=draft.dt?new Date(draft.dt+'T00:00:00').getTime():Date.now();
+  draft.exp=ld(base+n*DAY).replace(/\b\d{4}\b/,function(y){return y}).replace(/,$/,'');
+  /* Store as ISO date for the date input */
+  var d=new Date(base+n*DAY);
+  draft.exp=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  vNew();
+}
+
+/* 9. Home dashboard: use sod() properly for today-only stats */
+/* Already uses sod() in Phase 6 R1 wrapper. Ensure vDash0 also uses sod() */
+var _vDash0Orig=vDash0;
+vDash0=function(){
+  var a=sod(),b=a+DAY;
+  var todayRev=revE(a,b),todayCash=cashIn(a,b);
+  var act=D.o.filter(function(o){return o.st!=='Collected'}),rd=D.o.filter(function(o){return o.st==='Ready'});
+  $('#view').innerHTML='<h2>Today at the counter</h2>'+
+    '<div class="mut" style="margin:-6px 0 10px">'+SY+'</div>'+
+    '<div class="grid">'+
+    '<div class="stat">Revenue earned today<b>'+u(todayRev)+'</b></div>'+
+    '<div class="stat">Cash collected today<b style="color:var(--ok)">'+u(todayCash)+'</b></div>'+
+    '<div class="stat">In progress<b>'+act.length+'</b></div>'+
+    '<div class="stat">Ready for pickup<b>'+rd.length+'</b></div>'+
+    '<div class="stat">Clients<b>'+Object.keys(D.c).length+'</b></div>'+
+    '</div>'+
+    (D.o.length?'':(isO()?'<div class="card">No orders yet. Load demo data to preview.<div class="row2"><button class="p" onclick="go(\'new\')">New order</button><button class="g" onclick="seed()">Load demo data</button></div></div>':''))+
+    (rd.length?'<h2>Waiting for collection</h2><div class="cols">'+rd.map(oc).join('')+'</div>':'');
+};
+
+/* nudge grouping is built into tk() directly */
+
+/* 11. Fix contact picker input layout: inline, doesn't interfere with typing */
+/* Override addContactPicker to not wrap in flex (let CSS handle it) */
+addContactPicker=function(inputId,onFill){
+  var inp=document.getElementById(inputId);
+  if(!inp||inp.dataset.cpAdded)return;
+  inp.dataset.cpAdded='1';
+  var btn=document.createElement('button');
+  btn.type='button';btn.className='g';
+  btn.style.cssText='padding:6px 10px;font-size:17px;position:absolute;right:4px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;z-index:2';
+  btn.title='Search contacts';btn.textContent='📒';
+  btn.onclick=function(){
+    if('contacts' in navigator&&'ContactsManager' in window){
+      navigator.contacts.select(['name','tel'],{multiple:false}).then(function(cs){
+        if(!cs||!cs.length)return;
+        var c=cs[0];
+        var ph2=(c.tel&&c.tel[0]||'').replace(/\D/g,'').replace(/^0/,'256');
+        var nm2=(c.name&&c.name[0])||'';
+        onFill(ph2,nm2);
+      }).catch(function(){toast('Contacts access denied')});
+    } else {
+      toast('Contact picker not supported. Use Chrome on Android.');
+    }
+  };
+  /* Wrap input in relative div instead of flex */
+  var wrap=document.createElement('div');
+  wrap.style.cssText='position:relative;width:100%';
+  inp.parentNode.insertBefore(wrap,inp);
+  wrap.appendChild(inp);
+  wrap.appendChild(btn);
+  inp.style.paddingRight='44px';
+  inp.style.width='100%';
+};
+/* Re-apply picker on new order after each vNew call */
+var _vNew_p9=vNew;
+vNew=function(){
+  _vNew_p9();
+  setTimeout(function(){
+    var inp=document.getElementById('fp');
+    if(inp&&!inp.dataset.cpAdded){
+      addContactPicker('fp',function(ph2,nm2){
+        draft.ph=ph2;if(nm2&&!draft.name)draft.name=nm2;
+        inp.value=ph2;var fn=document.getElementById('fn');if(fn&&nm2&&!fn.value)fn.value=nm2;
+        pick(ph2);
+      });
+    }
+  },30);
 };
 </script>
 </body></html>
